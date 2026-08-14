@@ -29,13 +29,14 @@ func NewClient(path, profile string) *Client {
 	if profile == "" {
 		profile = defaultProfile
 	}
+	limaPath := locateLimactl(path)
 	return &Client{
 		path:          path,
 		profile:       profile,
-		limaPath:      locateLimactl(path),
+		limaPath:      limaPath,
 		limaHome:      resolveLimaHome(),
 		limaInstance:  limaInstanceName(profile),
-		runner:        ExecRunner{},
+		runner:        ExecRunner{lookupPaths: executableDirectories(limaPath)},
 		now:           time.Now,
 		statusTimeout: defaultStatusTimeout,
 		actionTimeout: defaultActionTimeout,

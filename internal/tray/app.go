@@ -3,37 +3,50 @@ package tray
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"fyne.io/systray"
 
+	"github.com/KevinCFechtel/ColimaStatus/internal/autostart"
 	"github.com/KevinCFechtel/ColimaStatus/internal/colima"
 	"github.com/KevinCFechtel/ColimaStatus/internal/monitor"
 )
 
+const autostartRefreshInterval = 5 * time.Second
+
 type App struct {
 	controller monitor.Controller
 	interval   time.Duration
+	autostart  autostart.Controller
 
 	ctx     context.Context
 	cancel  context.CancelFunc
 	monitor *monitor.Monitor
 	wait    sync.WaitGroup
 
-	statusItem  *systray.MenuItem
-	detailsItem *systray.MenuItem
-	checkedItem *systray.MenuItem
-	startItem   *systray.MenuItem
-	stopItem    *systray.MenuItem
-	refreshItem *systray.MenuItem
-	quitItem    *systray.MenuItem
+	statusItem            *systray.MenuItem
+	detailsItem           *systray.MenuItem
+	checkedItem           *systray.MenuItem
+	startItem             *systray.MenuItem
+	stopItem              *systray.MenuItem
+	refreshItem           *systray.MenuItem
+	autostartItem         *systray.MenuItem
+	autostartSettingsItem *systray.MenuItem
+	quitItem              *systray.MenuItem
 }
 
-func New(controller monitor.Controller, interval time.Duration) *App {
+func New(controller monitor.Controller, interval time.Duration, autostartController autostart.Controller) *App {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &App{controller: controller, interval: interval, ctx: ctx, cancel: cancel}
+	return &App{
+		controller: controller,
+		interval:   interval,
+		autostart:  autostartController,
+		ctx:        ctx,
+		cancel:     cancel,
+	}
 }
 
 func (app *App) OnReady() {
@@ -56,10 +69,17 @@ func (app *App) OnReady() {
 	app.startItem.Disable()
 	app.stopItem.Disable()
 	app.refreshItem = systray.AddMenuItem("Status aktualisieren", "Colima-Status sofort prüfen")
+	app.autostartItem = systray.AddMenuItemCheckbox("Bei Anmeldung starten", "ColimaStatus automatisch starten", false)
+	app.autostartSettingsItem = systray.AddMenuItem(
+		"Anmeldeobjekte in Systemeinstellungen öffnen …",
+		"Autostart für ColimaStatus in macOS freigeben",
+	)
+	app.autostartSettingsItem.Hide()
 	systray.AddSeparator()
 	app.quitItem = systray.AddMenuItem("Beenden", "ColimaStatus beenden")
 
 	app.monitor = monitor.New(app.controller, app.interval, app.render)
+	app.refreshAutostart()
 	app.startBackgroundTasks()
 }
 
@@ -76,6 +96,8 @@ func (app *App) startBackgroundTasks() {
 	}()
 	go func() {
 		defer app.wait.Done()
+		ticker := time.NewTicker(autostartRefreshInterval)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-app.ctx.Done():
@@ -86,6 +108,18 @@ func (app *App) startBackgroundTasks() {
 				app.monitor.Trigger(monitor.ActionStop)
 			case <-app.refreshItem.ClickedCh:
 				app.monitor.Trigger(monitor.ActionRefresh)
+			case _, open := <-app.autostartItem.ClickedCh:
+				if !open {
+					return
+				}
+				app.toggleAutostart()
+			case _, open := <-app.autostartSettingsItem.ClickedCh:
+				if !open {
+					return
+				}
+				app.openAutostartSettings()
+			case <-ticker.C:
+				app.refreshAutostart()
 			case <-app.quitItem.ClickedCh:
 				app.cancel()
 				systray.Quit()
@@ -180,6 +214,141 @@ func (app *App) renderError(err error) {
 func (app *App) setIcon(active bool) {
 	icon := iconPNG(active)
 	systray.SetTemplateIcon(icon, icon)
+}
+
+type autostartMenuState struct {
+	title        string
+	tooltip      string
+	checked      bool
+	enabled      bool
+	showSettings bool
+}
+
+func (app *App) refreshAutostart() {
+	if app.autostart == nil {
+		app.applyAutostartMenuState(autostartMenuStateFor(autostart.Unsupported))
+		return
+	}
+	status, err := app.autostart.Status()
+	if err != nil {
+		app.reportAutostartError(err)
+		return
+	}
+	app.applyAutostartMenuState(autostartMenuStateFor(status))
+}
+
+func (app *App) toggleAutostart() {
+	if app.autostart == nil {
+		return
+	}
+	status, err := app.autostart.Status()
+	if err != nil {
+		app.reportAutostartError(err)
+		return
+	}
+
+	if status == autostart.RequiresApproval {
+		app.openAutostartSettings()
+		return
+	}
+	desiredEnabled, canToggle := autostartToggle(status)
+	if !canToggle {
+		app.applyAutostartMenuState(autostartMenuStateFor(status))
+		return
+	}
+
+	resultingStatus, err := app.autostart.SetEnabled(desiredEnabled)
+	if err != nil {
+		app.reportAutostartError(err)
+		return
+	}
+	app.applyAutostartMenuState(autostartMenuStateFor(resultingStatus))
+	if resultingStatus == autostart.RequiresApproval {
+		app.openAutostartSettings()
+	}
+}
+
+func (app *App) openAutostartSettings() {
+	if app.autostart == nil {
+		return
+	}
+	if err := app.autostart.OpenSettings(); err != nil {
+		app.reportAutostartError(err)
+	}
+}
+
+func (app *App) reportAutostartError(err error) {
+	log.Printf("Autostart konnte nicht verwaltet werden: %v", err)
+	app.autostartItem.SetTitle("Autostart konnte nicht geändert werden")
+	app.autostartItem.SetTooltip(err.Error())
+	app.autostartItem.Disable()
+}
+
+func (app *App) applyAutostartMenuState(menuState autostartMenuState) {
+	app.autostartItem.SetTitle(menuState.title)
+	app.autostartItem.SetTooltip(menuState.tooltip)
+	if menuState.checked {
+		app.autostartItem.Check()
+	} else {
+		app.autostartItem.Uncheck()
+	}
+	if menuState.enabled {
+		app.autostartItem.Enable()
+	} else {
+		app.autostartItem.Disable()
+	}
+	if menuState.showSettings {
+		app.autostartSettingsItem.Show()
+	} else {
+		app.autostartSettingsItem.Hide()
+	}
+}
+
+func autostartMenuStateFor(status autostart.Status) autostartMenuState {
+	switch status {
+	case autostart.Disabled:
+		return autostartMenuState{
+			title:   "Bei Anmeldung starten",
+			tooltip: "ColimaStatus automatisch nach der Anmeldung starten",
+			enabled: true,
+		}
+	case autostart.Enabled:
+		return autostartMenuState{
+			title:   "Bei Anmeldung starten",
+			tooltip: "Autostart für ColimaStatus deaktivieren",
+			checked: true,
+			enabled: true,
+		}
+	case autostart.RequiresApproval:
+		return autostartMenuState{
+			title:        "Bei Anmeldung starten (Freigabe erforderlich)",
+			tooltip:      "In den macOS-Systemeinstellungen freigeben",
+			enabled:      true,
+			showSettings: true,
+		}
+	case autostart.NotFound:
+		return autostartMenuState{
+			title:   "Bei Anmeldung starten",
+			tooltip: "ColimaStatus als Anmeldeobjekt registrieren",
+			enabled: true,
+		}
+	default:
+		return autostartMenuState{
+			title:   "Bei Anmeldung starten (ab macOS 13)",
+			tooltip: "Diese Funktion benötigt macOS 13 oder neuer",
+		}
+	}
+}
+
+func autostartToggle(status autostart.Status) (enabled bool, canToggle bool) {
+	switch status {
+	case autostart.Disabled, autostart.NotFound:
+		return true, true
+	case autostart.Enabled:
+		return false, true
+	default:
+		return false, false
+	}
 }
 
 func profilePresentation(profile colima.Profile) string {

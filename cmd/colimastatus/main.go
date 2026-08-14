@@ -8,6 +8,7 @@ import (
 
 	"fyne.io/systray"
 
+	"github.com/KevinCFechtel/ColimaStatus/internal/autostart"
 	"github.com/KevinCFechtel/ColimaStatus/internal/colima"
 	"github.com/KevinCFechtel/ColimaStatus/internal/monitor"
 	trayui "github.com/KevinCFechtel/ColimaStatus/internal/tray"
@@ -16,7 +17,8 @@ import (
 const fallbackCheckInterval = 15 * time.Minute
 
 func main() {
-	app := trayui.New(newController(), fallbackCheckInterval)
+	autostartController := autostart.NewNativeController()
+	app := trayui.New(newController(), fallbackCheckInterval, autostartController)
 	systray.Run(app.OnReady, app.OnExit)
 }
 

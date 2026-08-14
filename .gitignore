@@ -31,6 +31,9 @@ go.work.sum
 dist/
 Build/.env
 
+# Local agent instructions
+AGENTS.md
+
 # Editor/IDE
 # .idea/
 # .vscode/
