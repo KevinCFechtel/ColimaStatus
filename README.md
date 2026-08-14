@@ -12,8 +12,10 @@ template icon it automatically remains legible in light and dark appearances.
 The menu shows the selected profile and its runtime, architecture, CPUs, and
 memory. Colima can be started and stopped directly from there. A broken profile
 is stopped with Colima's `--force` option, as recommended by the Colima FAQ.
-The status is refreshed immediately after launch, after each action, manually,
-and every minute.
+The status is refreshed immediately after launch, after each action, and
+manually. On Lima 2.1 or newer, lifecycle events update it automatically via
+`limactl watch --json`; a check every 15 minutes remains as a safety net. Older
+Lima versions automatically use the 15-minute fallback polling.
 
 ## Requirements
 

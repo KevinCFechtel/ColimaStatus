@@ -13,10 +13,10 @@ import (
 	trayui "github.com/KevinCFechtel/ColimaStatus/internal/tray"
 )
 
-const defaultCheckInterval = time.Minute
+const fallbackCheckInterval = 15 * time.Minute
 
 func main() {
-	app := trayui.New(newController(), defaultCheckInterval)
+	app := trayui.New(newController(), fallbackCheckInterval)
 	systray.Run(app.OnReady, app.OnExit)
 }
 

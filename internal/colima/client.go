@@ -16,6 +16,9 @@ const (
 type Client struct {
 	path          string
 	profile       string
+	limaPath      string
+	limaHome      string
+	limaInstance  string
 	runner        Runner
 	now           func() time.Time
 	statusTimeout time.Duration
@@ -29,6 +32,9 @@ func NewClient(path, profile string) *Client {
 	return &Client{
 		path:          path,
 		profile:       profile,
+		limaPath:      locateLimactl(path),
+		limaHome:      resolveLimaHome(),
+		limaInstance:  limaInstanceName(profile),
 		runner:        ExecRunner{},
 		now:           time.Now,
 		statusTimeout: defaultStatusTimeout,
