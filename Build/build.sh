@@ -17,6 +17,7 @@ rm -rf -- "${APP_DIR}"
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 install -m 0644 "${SCRIPT_DIR}/Info.plist" "${CONTENTS_DIR}/Info.plist"
 install -m 0644 "${SCRIPT_DIR}/AppIcon.icns" "${RESOURCES_DIR}/AppIcon.icns"
+install -m 0644 "${SCRIPT_DIR}/Assets.car" "${RESOURCES_DIR}/Assets.car"
 
 cd "${REPOSITORY_DIR}"
 MACOSX_DEPLOYMENT_TARGET=11.0 \

@@ -1,7 +1,7 @@
 # ColimaStatus
 
 <p align="center">
-  <img src="assets/AppIcon.png" alt="ColimaStatus app icon" width="160">
+  <img src="assets/AppIconPreview.png" alt="ColimaStatus app icon" width="160">
 </p>
 
 ColimaStatus is a lightweight, open-source macOS menu bar companion for your
@@ -95,11 +95,18 @@ The repository includes scripts for the common development tasks:
 ./Build/vet.sh       # Run Go's static analysis
 ```
 
-Regenerate `Build/AppIcon.icns` from `assets/AppIcon.png` with:
+Regenerate the adaptive app icon and its legacy fallback with:
 
 ```sh
 ./Build/generate-icons.sh
 ```
+
+The modern application icon is maintained as a layered Icon Composer asset in
+`assets/AppIcon.icon`. It follows the macOS light, dark, and tinted
+appearances; the dark background uses Apple's native `system-dark` material.
+`Build/Assets.car` contains the adaptive icon, while `Build/AppIcon.icns`
+remains the fallback for older supported macOS versions. Regeneration requires
+Xcode 26 or later.
 
 Contributions and bug reports are welcome. Please run the formatter, tests,
 and static analysis before submitting a pull request.
