@@ -15,9 +15,9 @@ func (NativeController) Status() (Status, error) {
 }
 
 func (NativeController) SetEnabled(bool) (Status, error) {
-	return Unsupported, errors.New("Autostart wird auf diesem Betriebssystem nicht unterstützt")
+	return Unsupported, errors.New("launch at login is not supported on this operating system")
 }
 
 func (NativeController) OpenSettings() error {
-	return errors.New("Autostart wird auf diesem Betriebssystem nicht unterstützt")
+	return errors.New("launch at login is not supported on this operating system")
 }

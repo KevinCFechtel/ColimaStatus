@@ -24,7 +24,7 @@ type profileJSON struct {
 func ParseProfiles(reader io.Reader) ([]Profile, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, fmt.Errorf("Colima-Status konnte nicht gelesen werden: %w", err)
+		return nil, fmt.Errorf("Colima status could not be read: %w", err)
 	}
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
@@ -34,7 +34,7 @@ func ParseProfiles(reader io.Reader) ([]Profile, error) {
 	var rawProfiles []profileJSON
 	if data[0] == '[' {
 		if err := json.Unmarshal(data, &rawProfiles); err != nil {
-			return nil, fmt.Errorf("Colima-Status ist kein gültiges JSON: %w", err)
+			return nil, fmt.Errorf("Colima status is not valid JSON: %w", err)
 		}
 	} else {
 		decoder := json.NewDecoder(bytes.NewReader(data))
@@ -44,7 +44,7 @@ func ParseProfiles(reader io.Reader) ([]Profile, error) {
 				if err == io.EOF {
 					break
 				}
-				return nil, fmt.Errorf("Colima-Status ist kein gültiges JSON: %w", err)
+				return nil, fmt.Errorf("Colima status is not valid JSON: %w", err)
 			}
 			rawProfiles = append(rawProfiles, raw)
 		}

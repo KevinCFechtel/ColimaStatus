@@ -1,0 +1,187 @@
+{
+  "Error.ColimaNotFound": {
+    "description": "Error shown when no Colima executable can be found.",
+    "hash": "sha1-e80397b1986eba9a5ce6a63a6159fa2c4a0e7c24",
+    "other": "Colima wurde nicht gefunden"
+  },
+  "Profile.Broken": {
+    "description": "Status for a broken Colima profile.",
+    "hash": "sha1-9819f4dd3074ad81396bbe5b90b1c8167186e8cb",
+    "other": "Colima ist defekt ({{.Name}})"
+  },
+  "Profile.Missing": {
+    "description": "Status for a Colima profile that has not been created.",
+    "hash": "sha1-4b869a2f62bc623d9f463d40e8859f2dc6e6adde",
+    "other": "Colima ist noch nicht eingerichtet ({{.Name}})"
+  },
+  "Profile.Running": {
+    "description": "Status for a running Colima profile.",
+    "hash": "sha1-1bb6a4c3a1c66a57d76f298cfd658287ae973b7e",
+    "other": "Colima läuft ({{.Name}})"
+  },
+  "Profile.Stopped": {
+    "description": "Status for a stopped Colima profile.",
+    "hash": "sha1-a0238b0237039ff72b62ce8d87b879997faf85f2",
+    "other": "Colima ist gestoppt ({{.Name}})"
+  },
+  "Profile.Unknown": {
+    "description": "Status for an unknown Colima profile state.",
+    "hash": "sha1-de369471684005310b64f93cdc12a1d2a60589e9",
+    "other": "Unbekannter Colima-Status ({{.Name}})"
+  },
+  "Tray.AutostartApprovalTitle": {
+    "description": "Launch at login menu title when macOS approval is required.",
+    "hash": "sha1-6cf886af16c325a72f131c7272a4a39f0d36a0be",
+    "other": "Bei Anmeldung starten (Freigabe erforderlich)"
+  },
+  "Tray.AutostartApprovalTooltip": {
+    "description": "Tooltip explaining that launch at login must be approved in macOS.",
+    "hash": "sha1-3ba3f0839c87f407e4dd47856b708acaa8e95621",
+    "other": "ColimaStatus in den macOS-Systemeinstellungen freigeben"
+  },
+  "Tray.AutostartDisableTooltip": {
+    "description": "Tooltip when launch at login can be disabled.",
+    "hash": "sha1-01a3ce0a6945a0b64d57429bf9d8ee56db587eb2",
+    "other": "Autostart für ColimaStatus deaktivieren"
+  },
+  "Tray.AutostartEnableTooltip": {
+    "description": "Tooltip when launch at login can be enabled.",
+    "hash": "sha1-273474a548021894e958f2dddcb60cea2cc20674",
+    "other": "ColimaStatus automatisch nach der Anmeldung starten"
+  },
+  "Tray.AutostartManageFailed": {
+    "description": "Status shown when launch at login could not be changed.",
+    "hash": "sha1-e38fe5ee95d8c69d7169b20043ad43807cc8097f",
+    "other": "Autostart konnte nicht geändert werden"
+  },
+  "Tray.AutostartRegisterTooltip": {
+    "description": "Tooltip when ColimaStatus can be registered as a login item.",
+    "hash": "sha1-d3981e086ebbc647f2c2edcfcb5310f9415bbaa7",
+    "other": "ColimaStatus als Anmeldeobjekt registrieren"
+  },
+  "Tray.AutostartTitle": {
+    "description": "Menu checkbox for launching ColimaStatus when the user logs in.",
+    "hash": "sha1-1e7473158bee475413f9e0c569d21b4ee9b92506",
+    "other": "Bei Anmeldung starten"
+  },
+  "Tray.AutostartUnsupportedTitle": {
+    "description": "Launch at login menu title on unsupported macOS versions.",
+    "hash": "sha1-13108a8b3ea2e113f4a0365134e0c0ff9689f405",
+    "other": "Bei Anmeldung starten (ab macOS 13)"
+  },
+  "Tray.AutostartUnsupportedTooltip": {
+    "description": "Tooltip explaining the minimum macOS version for launch at login.",
+    "hash": "sha1-9bfce7f0732d64a2eacdc8009ad705b7bce77910",
+    "other": "Diese Funktion benötigt macOS 13 oder neuer"
+  },
+  "Tray.BusyTooltip": {
+    "description": "Menu bar tooltip while an operation is running.",
+    "hash": "sha1-4f68702c6fa73d204513f271c7298c0d1734e36c",
+    "other": "ColimaStatus – Vorgang läuft"
+  },
+  "Tray.Checking": {
+    "description": "Status shown while Colima is being checked.",
+    "hash": "sha1-90aa8471b6a092ca1c9f9938fb8231305a927a47",
+    "other": "Colima-Status wird geprüft …"
+  },
+  "Tray.CurrentStatusTooltip": {
+    "description": "Tooltip for the current Colima status row.",
+    "hash": "sha1-028dcc0fb6c786ecb5353d998793f076f82f7558",
+    "other": "Aktueller Colima-Status"
+  },
+  "Tray.ForceStop": {
+    "description": "Menu action that force stops a broken Colima profile.",
+    "hash": "sha1-b37876bb4b06c319e3e06969570cf8805235d28e",
+    "other": "Erzwungen stoppen"
+  },
+  "Tray.LastCheckTooltip": {
+    "description": "Tooltip for the time of the last Colima status check.",
+    "hash": "sha1-78cc7bb88830aeffacf8015c51fb1348c3162225",
+    "other": "Zeitpunkt der letzten Statusabfrage"
+  },
+  "Tray.LastChecked": {
+    "description": "Status containing the localized time of the last Colima check.",
+    "hash": "sha1-3eab1f273703fa376ab513504dbbb885f99af34c",
+    "other": "Zuletzt geprüft: {{.Time}}"
+  },
+  "Tray.OpenLoginItems": {
+    "description": "Menu action that opens the macOS Login Items settings.",
+    "hash": "sha1-3a589e7e7cd21908c3c0c60dd1f8b97f95d59de4",
+    "other": "Anmeldeobjekte in Systemeinstellungen öffnen …"
+  },
+  "Tray.OpenLoginItemsTooltip": {
+    "description": "Tooltip for opening Login Items settings to approve ColimaStatus.",
+    "hash": "sha1-9fa85e09f70361e34b3121d95d94f571663054ff",
+    "other": "Autostart für ColimaStatus in macOS freigeben"
+  },
+  "Tray.ProfileDetailsTooltip": {
+    "description": "Tooltip for the Colima profile configuration row.",
+    "hash": "sha1-393f433fccef279b4758efc6120cacc17c89d813",
+    "other": "Colima-Konfiguration"
+  },
+  "Tray.Quit": {
+    "description": "Menu action that quits ColimaStatus.",
+    "hash": "sha1-4cf22487fd342705d1567cf5a7daf36d139da665",
+    "other": "Beenden"
+  },
+  "Tray.QuitTooltip": {
+    "description": "Tooltip for the quit action.",
+    "hash": "sha1-e79a80ee6b36ab52efbcc2eae766e45b46783e65",
+    "other": "ColimaStatus beenden"
+  },
+  "Tray.Refresh": {
+    "description": "Menu action that checks Colima immediately.",
+    "hash": "sha1-c6fe0ca333cb7a312395608f51677e80b8d80598",
+    "other": "Status aktualisieren"
+  },
+  "Tray.RefreshTooltip": {
+    "description": "Tooltip for the immediate Colima status check action.",
+    "hash": "sha1-308a8d0865b325bf6aa781cd938267d0c9afa4ee",
+    "other": "Colima-Status sofort prüfen"
+  },
+  "Tray.Start": {
+    "description": "Menu action that starts Colima.",
+    "hash": "sha1-a6859edf9a5d99a85d316c8e348e75199992a8ef",
+    "other": "Starten"
+  },
+  "Tray.StartTooltip": {
+    "description": "Tooltip for the action that starts Colima.",
+    "hash": "sha1-8f5bcf8451312a0850dd3b5f8f50df0b761af3e0",
+    "other": "Colima starten"
+  },
+  "Tray.Starting": {
+    "description": "Status shown while Colima is starting.",
+    "hash": "sha1-be02103315045b37109b3945d1269fd562f050e1",
+    "other": "Colima wird gestartet …"
+  },
+  "Tray.Stop": {
+    "description": "Menu action that stops Colima.",
+    "hash": "sha1-2935438d4b5c8b07c7b7375b54ca2c2085636eab",
+    "other": "Stoppen"
+  },
+  "Tray.StopTooltip": {
+    "description": "Tooltip for the action that stops Colima.",
+    "hash": "sha1-58728706e12b3d798d9320bc9b7227f1d0830188",
+    "other": "Colima stoppen"
+  },
+  "Tray.Stopping": {
+    "description": "Status shown while Colima is stopping.",
+    "hash": "sha1-14f1d4e44dd9439f1b916ff2186875f67a69eb42",
+    "other": "Colima wird gestoppt …"
+  },
+  "Tray.Tooltip": {
+    "description": "Tooltip for the ColimaStatus menu bar icon.",
+    "hash": "sha1-7b860cb4a74d10423fd04b7a020b8f7bc30c27d8",
+    "other": "ColimaStatus – Colima-Status"
+  },
+  "Tray.Unavailable": {
+    "description": "Status shown when the Colima status is unavailable.",
+    "hash": "sha1-3bd786852812379cd013c18d3ea0b2c402cb94fc",
+    "other": "Colima-Status nicht verfügbar"
+  },
+  "Tray.UnavailableTooltip": {
+    "description": "Menu bar tooltip when the Colima status is unavailable.",
+    "hash": "sha1-88eeb73f6f25f7842e1c5e41595dbfe9deafd0fe",
+    "other": "ColimaStatus – Fehler"
+  }
+}

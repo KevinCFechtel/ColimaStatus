@@ -5,9 +5,11 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 APP_DIR="${REPOSITORY_DIR}/dist/ColimaStatus.app"
 RELEASE_DIR="${REPOSITORY_DIR}/dist/release"
-INFO_PLIST="${SCRIPT_DIR}/Info.plist"
 RELEASE_ENV_FILE="${COLIMASTATUS_RELEASE_ENV_FILE:-${SCRIPT_DIR}/.env}"
 EXPECTED_BUNDLE_ID="dev.kevincfechtel.ColimaStatus"
+
+# shellcheck source=version.sh
+source "${SCRIPT_DIR}/version.sh"
 
 if [[ -f "${RELEASE_ENV_FILE}" ]]; then
   set -a
@@ -21,8 +23,9 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 SIGNING_TIMESTAMP_URL="${SIGNING_TIMESTAMP_URL:-}"
 NOTARY_TIMEOUT="${NOTARY_TIMEOUT:-30m}"
 RELEASE_ARCH="${GOARCH:-$(go env GOARCH)}"
-RELEASE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${INFO_PLIST}")"
-BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${INFO_PLIST}")"
+RELEASE_VERSION="${APP_VERSION}"
+RELEASE_BUILD_NUMBER="${APP_BUILD_NUMBER}"
+BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${SCRIPT_DIR}/Info.plist")"
 
 if [[ -z "${SIGNING_IDENTITY}" ]]; then
   echo "SIGNING_IDENTITY fehlt (Developer ID Application)." >&2
@@ -39,14 +42,20 @@ if [[ "${BUNDLE_ID}" != "${EXPECTED_BUNDLE_ID}" ]]; then
   exit 1
 fi
 
-if [[ ! "${RELEASE_VERSION}" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then
-  echo "Ungültige Release-Version: ${RELEASE_VERSION}" >&2
-  exit 1
-fi
-
 if [[ ! "${RELEASE_ARCH}" =~ ^[0-9A-Za-z_-]+$ ]]; then
   echo "Ungültige Architektur: ${RELEASE_ARCH}" >&2
   exit 1
+fi
+
+if command -v git >/dev/null 2>&1 && git -C "${REPOSITORY_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  EXPECTED_RELEASE_TAG="v${RELEASE_VERSION}"
+  RELEASE_TAGS="$(git -C "${REPOSITORY_DIR}" tag --points-at HEAD --list 'v*')"
+  if [[ -n "${RELEASE_TAGS}" ]] && ! grep -Fx -- "${EXPECTED_RELEASE_TAG}" <<<"${RELEASE_TAGS}" >/dev/null; then
+    echo "Release-Tag am aktuellen Commit stimmt nicht mit VERSION überein." >&2
+    echo "Erwartet: ${EXPECTED_RELEASE_TAG}" >&2
+    echo "Gefunden: ${RELEASE_TAGS}" >&2
+    exit 1
+  fi
 fi
 
 for command_name in awk codesign dscacheutil ditto go grep security spctl xcrun; do
@@ -84,8 +93,25 @@ cleanup() {
 }
 trap cleanup EXIT
 
+verify_bundle_version() {
+  local bundle_path="$1"
+  local bundle_info_plist="${bundle_path}/Contents/Info.plist"
+  local actual_version
+  local actual_build_number
+
+  actual_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${bundle_info_plist}")"
+  actual_build_number="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${bundle_info_plist}")"
+  if [[ "${actual_version}" != "${RELEASE_VERSION}" || "${actual_build_number}" != "${RELEASE_BUILD_NUMBER}" ]]; then
+    echo "Versionsdaten stimmen nicht mit VERSION und BUILD_NUMBER überein: ${bundle_path}" >&2
+    echo "Erwartet: ${RELEASE_VERSION} (${RELEASE_BUILD_NUMBER})" >&2
+    echo "Gefunden: ${actual_version} (${actual_build_number})" >&2
+    exit 1
+  fi
+}
+
 echo "1/8 ColimaStatus-App bauen"
 GOARCH="${RELEASE_ARCH}" "${SCRIPT_DIR}/build.sh"
+verify_bundle_version "${APP_DIR}"
 
 echo "2/8 Mit Developer ID und Hardened Runtime signieren"
 codesign \
@@ -136,8 +162,9 @@ COPYFILE_DISABLE=1 ditto \
 
 echo "8/8 Release-ZIP erneut extrahieren und vollständig prüfen"
 ditto -x -k "${FINAL_ARCHIVE}" "${CHECK_DIR}"
+verify_bundle_version "${CHECK_DIR}/ColimaStatus.app"
 xcrun stapler validate "${CHECK_DIR}/ColimaStatus.app"
 codesign --verify --deep --strict --verbose=4 "${CHECK_DIR}/ColimaStatus.app"
 spctl --assess --type execute --verbose=4 "${CHECK_DIR}/ColimaStatus.app"
 
-echo "Release erstellt: ${FINAL_ARCHIVE}"
+echo "Release ${RELEASE_VERSION} (Build ${RELEASE_BUILD_NUMBER}) erstellt: ${FINAL_ARCHIVE}"

@@ -30,6 +30,7 @@ application without a Dock icon or a separate window.
 - Finds Homebrew and MacPorts installations even when macOS starts the app
   with a restricted `PATH`.
 - Supports custom Colima profiles and executable locations.
+- Follows the macOS language in English and German.
 
 All status checks and actions run locally. ColimaStatus does not require a
 cloud account or a background service of its own.
@@ -79,6 +80,7 @@ The default Colima profile is monitored unless configured otherwise:
 | --- | --- |
 | `COLIMASTATUS_PROFILE` | Monitor a profile other than `default` |
 | `COLIMASTATUS_COLIMA_PATH` | Use a Colima executable in a non-standard location |
+| `COLIMASTATUS_LANGUAGE` | Override the app language with `en` or `de` |
 
 These variables must be present in the environment that launches the app.
 ColimaStatus automatically resolves the required `colima` and `limactl`
@@ -91,6 +93,7 @@ The repository includes scripts for the common development tasks:
 ```sh
 ./Build/run.sh       # Build and run the menu bar app
 ./Build/format.sh    # Format Go source files
+./Build/localization.sh # Validate localization catalogs
 ./Build/test.sh      # Run the test suite with the race detector
 ./Build/vet.sh       # Run Go's static analysis
 ```
@@ -107,6 +110,46 @@ appearances; the dark background uses Apple's native `system-dark` material.
 `Build/Assets.car` contains the adaptive icon, while `Build/AppIcon.icns`
 remains the fallback for older supported macOS versions. Regeneration requires
 Xcode 26 or later.
+
+## Localization
+
+English is ColimaStatus's source and fallback language. German is maintained in
+the embedded JSON catalogs under `internal/localization/locales`. The app uses
+the operating system language unless `COLIMASTATUS_LANGUAGE` is set to `en` or
+`de`.
+
+User-facing messages are defined as typed methods in `internal/localization`.
+After changing a message, extract the English catalog, merge the German
+translation, and validate both catalogs:
+
+```sh
+go tool goi18n extract -sourceLanguage en -format json \
+  -outdir internal/localization/locales internal/localization
+go tool goi18n merge -sourceLanguage en -format json \
+  -outdir internal/localization/locales \
+  internal/localization/locales/active.en.json \
+  internal/localization/locales/active.de.json
+./Build/localization.sh
+```
+
+## Versioning
+
+The release version is stored in `VERSION` using `MAJOR.MINOR.PATCH`.
+`BUILD_NUMBER` contains the positive, monotonically increasing build number.
+`Build/build.sh` writes both values into the generated bundle and embeds them,
+together with the Git commit, in the binary.
+
+Inspect and validate the metadata with:
+
+```sh
+./Build/version.sh
+./Build/build.sh
+dist/ColimaStatus.app/Contents/MacOS/ColimaStatus --version
+```
+
+For a new release, update both files. A `v*` tag on the release commit must
+match `v$(cat VERSION)`; rebuilding the same version requires incrementing only
+`BUILD_NUMBER`.
 
 Contributions and bug reports are welcome. Please run the formatter, tests,
 and static analysis before submitting a pull request.

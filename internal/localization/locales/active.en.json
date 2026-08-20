@@ -1,0 +1,150 @@
+{
+  "Error.ColimaNotFound": {
+    "description": "Error shown when no Colima executable can be found.",
+    "other": "Colima was not found"
+  },
+  "Profile.Broken": {
+    "description": "Status for a broken Colima profile.",
+    "other": "Colima is broken ({{.Name}})"
+  },
+  "Profile.Missing": {
+    "description": "Status for a Colima profile that has not been created.",
+    "other": "Colima is not set up yet ({{.Name}})"
+  },
+  "Profile.Running": {
+    "description": "Status for a running Colima profile.",
+    "other": "Colima is running ({{.Name}})"
+  },
+  "Profile.Stopped": {
+    "description": "Status for a stopped Colima profile.",
+    "other": "Colima is stopped ({{.Name}})"
+  },
+  "Profile.Unknown": {
+    "description": "Status for an unknown Colima profile state.",
+    "other": "Unknown Colima status ({{.Name}})"
+  },
+  "Tray.AutostartApprovalTitle": {
+    "description": "Launch at login menu title when macOS approval is required.",
+    "other": "Launch at login (approval required)"
+  },
+  "Tray.AutostartApprovalTooltip": {
+    "description": "Tooltip explaining that launch at login must be approved in macOS.",
+    "other": "Allow ColimaStatus in macOS System Settings"
+  },
+  "Tray.AutostartDisableTooltip": {
+    "description": "Tooltip when launch at login can be disabled.",
+    "other": "Disable launch at login for ColimaStatus"
+  },
+  "Tray.AutostartEnableTooltip": {
+    "description": "Tooltip when launch at login can be enabled.",
+    "other": "Launch ColimaStatus automatically after login"
+  },
+  "Tray.AutostartManageFailed": {
+    "description": "Status shown when launch at login could not be changed.",
+    "other": "Launch at login could not be changed"
+  },
+  "Tray.AutostartRegisterTooltip": {
+    "description": "Tooltip when ColimaStatus can be registered as a login item.",
+    "other": "Register ColimaStatus as a login item"
+  },
+  "Tray.AutostartTitle": {
+    "description": "Menu checkbox for launching ColimaStatus when the user logs in.",
+    "other": "Launch at login"
+  },
+  "Tray.AutostartUnsupportedTitle": {
+    "description": "Launch at login menu title on unsupported macOS versions.",
+    "other": "Launch at login (macOS 13 or later)"
+  },
+  "Tray.AutostartUnsupportedTooltip": {
+    "description": "Tooltip explaining the minimum macOS version for launch at login.",
+    "other": "This feature requires macOS 13 or later"
+  },
+  "Tray.BusyTooltip": {
+    "description": "Menu bar tooltip while an operation is running.",
+    "other": "ColimaStatus – Operation in progress"
+  },
+  "Tray.Checking": {
+    "description": "Status shown while Colima is being checked.",
+    "other": "Checking Colima status …"
+  },
+  "Tray.CurrentStatusTooltip": {
+    "description": "Tooltip for the current Colima status row.",
+    "other": "Current Colima status"
+  },
+  "Tray.ForceStop": {
+    "description": "Menu action that force stops a broken Colima profile.",
+    "other": "Force stop"
+  },
+  "Tray.LastCheckTooltip": {
+    "description": "Tooltip for the time of the last Colima status check.",
+    "other": "Time of the last status check"
+  },
+  "Tray.LastChecked": {
+    "description": "Status containing the localized time of the last Colima check.",
+    "other": "Last checked: {{.Time}}"
+  },
+  "Tray.OpenLoginItems": {
+    "description": "Menu action that opens the macOS Login Items settings.",
+    "other": "Open Login Items in System Settings …"
+  },
+  "Tray.OpenLoginItemsTooltip": {
+    "description": "Tooltip for opening Login Items settings to approve ColimaStatus.",
+    "other": "Allow ColimaStatus to launch at login in macOS"
+  },
+  "Tray.ProfileDetailsTooltip": {
+    "description": "Tooltip for the Colima profile configuration row.",
+    "other": "Colima configuration"
+  },
+  "Tray.Quit": {
+    "description": "Menu action that quits ColimaStatus.",
+    "other": "Quit"
+  },
+  "Tray.QuitTooltip": {
+    "description": "Tooltip for the quit action.",
+    "other": "Quit ColimaStatus"
+  },
+  "Tray.Refresh": {
+    "description": "Menu action that checks Colima immediately.",
+    "other": "Refresh status"
+  },
+  "Tray.RefreshTooltip": {
+    "description": "Tooltip for the immediate Colima status check action.",
+    "other": "Check Colima status now"
+  },
+  "Tray.Start": {
+    "description": "Menu action that starts Colima.",
+    "other": "Start"
+  },
+  "Tray.StartTooltip": {
+    "description": "Tooltip for the action that starts Colima.",
+    "other": "Start Colima"
+  },
+  "Tray.Starting": {
+    "description": "Status shown while Colima is starting.",
+    "other": "Starting Colima …"
+  },
+  "Tray.Stop": {
+    "description": "Menu action that stops Colima.",
+    "other": "Stop"
+  },
+  "Tray.StopTooltip": {
+    "description": "Tooltip for the action that stops Colima.",
+    "other": "Stop Colima"
+  },
+  "Tray.Stopping": {
+    "description": "Status shown while Colima is stopping.",
+    "other": "Stopping Colima …"
+  },
+  "Tray.Tooltip": {
+    "description": "Tooltip for the ColimaStatus menu bar icon.",
+    "other": "ColimaStatus – Colima status"
+  },
+  "Tray.Unavailable": {
+    "description": "Status shown when the Colima status is unavailable.",
+    "other": "Colima status unavailable"
+  },
+  "Tray.UnavailableTooltip": {
+    "description": "Menu bar tooltip when the Colima status is unavailable.",
+    "other": "ColimaStatus – Error"
+  }
+}

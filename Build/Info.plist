@@ -19,9 +19,11 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <!-- Replaced from VERSION by Build/build.sh. -->
+    <string>0.0.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <!-- Replaced from BUILD_NUMBER by Build/build.sh. -->
+    <string>0</string>
     <key>LSMinimumSystemVersion</key>
     <string>11.0</string>
     <key>LSUIElement</key>

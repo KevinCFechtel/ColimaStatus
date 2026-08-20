@@ -49,7 +49,7 @@ func (client *Client) Status(ctx context.Context) (Profile, error) {
 
 	output, err := client.runner.Run(statusContext, client.path, "list", "--json")
 	if err != nil {
-		return Profile{}, fmt.Errorf("Colima-Status konnte nicht abgefragt werden: %w", err)
+		return Profile{}, fmt.Errorf("Colima status could not be queried: %w", err)
 	}
 	profiles, err := ParseProfiles(strings.NewReader(output.Stdout))
 	if err != nil {
@@ -80,7 +80,7 @@ func (client *Client) Stop(ctx context.Context, force bool) error {
 	if force {
 		args = append(args, "--force")
 	}
-	return client.run(ctx, "Colima konnte nicht gestoppt werden", args...)
+	return client.run(ctx, "Colima could not be stopped", args...)
 }
 
 func (client *Client) runAction(ctx context.Context, action string) error {
@@ -88,7 +88,7 @@ func (client *Client) runAction(ctx context.Context, action string) error {
 	if client.profile != defaultProfile {
 		args = append(args, client.profile)
 	}
-	return client.run(ctx, "Colima konnte nicht gestartet werden", args...)
+	return client.run(ctx, "Colima could not be started", args...)
 }
 
 func (client *Client) run(ctx context.Context, message string, args ...string) error {

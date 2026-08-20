@@ -44,7 +44,7 @@ func (NativeController) SetEnabled(enabled bool) (Status, error) {
 	}
 	if nativeStatus == nativeError {
 		if errorMessage == nil {
-			return NotFound, errors.New("Autostart konnte nicht geändert werden")
+			return NotFound, errors.New("launch at login could not be changed")
 		}
 		return NotFound, errors.New(C.GoString(errorMessage))
 	}
@@ -53,7 +53,7 @@ func (NativeController) SetEnabled(enabled bool) (Status, error) {
 
 func (NativeController) OpenSettings() error {
 	if C.ColimaStatusOpenAutostartSettings() == 0 {
-		return errors.New("die Anmeldeobjekt-Einstellungen benötigen macOS 13 oder neuer")
+		return errors.New("Login Items settings require macOS 13 or later")
 	}
 	return nil
 }
@@ -71,6 +71,6 @@ func statusFromNative(nativeStatus C.int) (Status, error) {
 	case 4:
 		return NotFound, nil
 	default:
-		return NotFound, fmt.Errorf("unbekannter nativer Autostartstatus: %d", int(nativeStatus))
+		return NotFound, fmt.Errorf("unknown native launch at login status: %d", int(nativeStatus))
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/KevinCFechtel/ColimaStatus/internal/autostart"
 	"github.com/KevinCFechtel/ColimaStatus/internal/colima"
+	"github.com/KevinCFechtel/ColimaStatus/internal/localization"
 )
 
 func TestIconIsPNG(t *testing.T) {
@@ -77,8 +78,9 @@ func TestProfilePresentation(t *testing.T) {
 		{state: colima.StateMissing, want: "Colima ist noch nicht eingerichtet (work)"},
 		{state: colima.StateBroken, want: "Colima ist defekt (work)"},
 	}
+	texts := localization.MustNew("de")
 	for _, test := range tests {
-		got := profilePresentation(colima.Profile{Name: "work", State: test.state})
+		got := profilePresentation(texts, colima.Profile{Name: "work", State: test.state})
 		if got != test.want {
 			t.Errorf("profilePresentation(%q) = %q, want %q", test.state, got, test.want)
 		}
@@ -133,7 +135,7 @@ func TestAutostartMenuState(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			state := autostartMenuStateFor(test.status)
+			state := autostartMenuStateFor(localization.MustNew("de"), test.status)
 			if state.checked != test.checked || state.enabled != test.enabled || state.showSettings != test.showSettings {
 				t.Fatalf(
 					"state = {checked:%t enabled:%t showSettings:%t}",

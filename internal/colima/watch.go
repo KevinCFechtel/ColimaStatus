@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-var ErrWatchUnsupported = errors.New("Lima-Ereignisse werden nicht unterstützt")
+var ErrWatchUnsupported = errors.New("Lima events are not supported")
 
 const maximumWatchEventSize = 1024 * 1024
 
@@ -42,7 +42,7 @@ func (client *Client) Watch(ctx context.Context, notify func()) error {
 	command.Env = append(os.Environ(), "LIMA_HOME="+client.limaHome, "NO_COLOR=1")
 	stdout, err := command.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("Lima-Ereignisstream konnte nicht geöffnet werden: %w", err)
+		return fmt.Errorf("Lima event stream could not be opened: %w", err)
 	}
 	var stderr bytes.Buffer
 	command.Stderr = &stderr
@@ -50,7 +50,7 @@ func (client *Client) Watch(ctx context.Context, notify func()) error {
 		if errors.Is(err, os.ErrNotExist) {
 			return ErrWatchUnsupported
 		}
-		return fmt.Errorf("Lima-Ereignisstream konnte nicht gestartet werden: %w", err)
+		return fmt.Errorf("Lima event stream could not be started: %w", err)
 	}
 
 	scanner := bufio.NewScanner(stdout)
@@ -69,7 +69,7 @@ func (client *Client) Watch(ctx context.Context, notify func()) error {
 		return ctx.Err()
 	}
 	if scanErr != nil {
-		return fmt.Errorf("Lima-Ereignisstream konnte nicht gelesen werden: %w", scanErr)
+		return fmt.Errorf("Lima event stream could not be read: %w", scanErr)
 	}
 	if waitErr != nil {
 		details := strings.TrimSpace(stderr.String())
@@ -77,11 +77,11 @@ func (client *Client) Watch(ctx context.Context, notify func()) error {
 			return ErrWatchUnsupported
 		}
 		if details != "" {
-			return fmt.Errorf("Lima-Ereignisstream wurde beendet: %w: %s", waitErr, shortCommandOutput(details))
+			return fmt.Errorf("Lima event stream exited: %w: %s", waitErr, shortCommandOutput(details))
 		}
-		return fmt.Errorf("Lima-Ereignisstream wurde beendet: %w", waitErr)
+		return fmt.Errorf("Lima event stream exited: %w", waitErr)
 	}
-	return errors.New("Lima-Ereignisstream wurde unerwartet beendet")
+	return errors.New("Lima event stream exited unexpectedly")
 }
 
 func relevantLimaEvent(data []byte, instance string) (bool, error) {
