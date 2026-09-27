@@ -5,6 +5,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 
 cd "${REPOSITORY_DIR}"
-gofmt -w ./cmd ./internal ./tools
+gofmt -w ./cmd ./internal
 
 echo "Go source formatted."

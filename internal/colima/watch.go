@@ -134,14 +134,6 @@ func watchCommandUnsupported(stderr string) bool {
 		strings.Contains(message, "no help topic")
 }
 
-func shortCommandOutput(output string) string {
-	const maximumLength = 600
-	if len(output) <= maximumLength {
-		return output
-	}
-	return output[:maximumLength] + "…"
-}
-
 func locateLimactl(colimaPath string) string {
 	if colimaPath != "" {
 		candidate := filepath.Join(filepath.Dir(colimaPath), "limactl")
@@ -154,11 +146,7 @@ func locateLimactl(colimaPath string) string {
 			return validated
 		}
 	}
-	for _, candidate := range []string{
-		"/opt/homebrew/bin/limactl",
-		"/usr/local/bin/limactl",
-		"/opt/local/bin/limactl",
-	} {
+	for _, candidate := range candidatePaths("limactl") {
 		if path, err := validateExecutable(candidate); err == nil {
 			return path
 		}

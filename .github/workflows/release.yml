@@ -1,0 +1,76 @@
+name: Release artifacts
+
+# Signing and notarization stay local: Build/release.sh needs the private
+# Developer ID identity and a notarytool keychain profile. This workflow only
+# proves that a tagged commit builds and passes verification, and publishes an
+# ad-hoc signed bundle for inspection. The signed, notarized and stapled
+# archive is still produced by Build/release.sh and attached by hand.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-tag:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify tag matches VERSION
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          expected="v$(cat VERSION)"
+          if [[ "${tag}" != "${expected}" ]]; then
+            echo "Tag ${tag} does not match VERSION (${expected})." >&2
+            exit 1
+          fi
+
+      - run: ./Build/vet.sh
+      - run: ./Build/localization.sh
+      - run: go test -race ./...
+      - run: ./Build/build.sh
+
+      - name: Verify app bundle
+        run: |
+          dist/ColimaStatus.app/Contents/MacOS/ColimaStatus --version
+          plutil -lint dist/ColimaStatus.app/Contents/Info.plist
+          codesign --verify --strict --verbose=2 dist/ColimaStatus.app
+          xcrun vtool -show-build-version dist/ColimaStatus.app/Contents/MacOS/ColimaStatus
+          # A universal bundle must carry both slices. Without the x86_64 one an
+          # Intel Mac gets an app that cannot launch, and Homebrew reports
+          # nothing about the mismatch.
+          archs="$(lipo -archs dist/ColimaStatus.app/Contents/MacOS/ColimaStatus)"
+          echo "Architectures: ${archs}"
+          for required in arm64 x86_64; do
+            if [[ "${archs}" != *"${required}"* ]]; then
+              echo "Missing ${required} slice in the build." >&2
+              exit 1
+            fi
+          done
+
+      - name: Archive the bundle
+        # upload-artifact re-zips its input without preserving the executable
+        # bit or symlinks, which would leave an unusable .app. Archiving with
+        # ditto first keeps the bundle intact inside the artifact.
+        run: |
+          mkdir -p dist/ci
+          COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc --noextattr \
+            dist/ColimaStatus.app \
+            "dist/ci/ColimaStatus-${GITHUB_REF_NAME}-unsigned.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ColimaStatus-${{ github.ref_name }}-unsigned
+          path: dist/ci/ColimaStatus-${{ github.ref_name }}-unsigned.zip
+          retention-days: 14

@@ -48,9 +48,7 @@ func (runner ExecRunner) Run(ctx context.Context, executable string, args ...str
 	if details == "" {
 		details = strings.TrimSpace(output.Stdout)
 	}
-	if len(details) > 600 {
-		details = details[:600] + "…"
-	}
+	details = shortCommandOutput(details)
 	if details == "" {
 		return output, err
 	}

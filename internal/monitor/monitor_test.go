@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -212,4 +213,72 @@ func waitForIdleState(t *testing.T, states <-chan State, want colima.State) {
 			t.Fatalf("timed out waiting for idle state %q", want)
 		}
 	}
+}
+
+// A click that arrives while an operation is running must not be lost. The
+// action waits in the queue and runs afterwards, which is what a user expects
+// after pressing refresh during a long start.
+func TestTriggerQueuesAnActionArrivingWhileBusy(t *testing.T) {
+	t.Parallel()
+
+	released := make(chan struct{})
+	controller := &blockingController{released: released}
+	states := make(chan State, 16)
+	testMonitor := New(controller, time.Hour, func(state State) { states <- state })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		testMonitor.Run(ctx)
+	}()
+
+	// The initial refresh is in flight and blocked inside Status.
+	waitFor(t, func() bool { return controller.statusCalls() == 1 })
+	testMonitor.Trigger(ActionRefresh)
+	close(released)
+
+	waitFor(t, func() bool { return controller.statusCalls() >= 2 })
+	cancel()
+	<-done
+}
+
+type blockingController struct {
+	released chan struct{}
+	blocked  atomic.Bool
+	calls    atomic.Int64
+}
+
+func (controller *blockingController) Status(ctx context.Context) (colima.Profile, error) {
+	controller.calls.Add(1)
+	// Only the first call blocks; afterwards the queued action must get through.
+	if controller.blocked.CompareAndSwap(false, true) {
+		select {
+		case <-controller.released:
+		case <-ctx.Done():
+			return colima.Profile{}, ctx.Err()
+		}
+	}
+	return colima.Profile{Name: "default", State: colima.StateStopped}, nil
+}
+
+func (controller *blockingController) Start(context.Context) error { return nil }
+
+func (controller *blockingController) Stop(context.Context, bool) error { return nil }
+
+func (controller *blockingController) statusCalls() int64 { return controller.calls.Load() }
+
+func waitFor(t *testing.T, condition func() bool) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if condition() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("timed out waiting for the expected state")
 }

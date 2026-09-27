@@ -6,7 +6,10 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"strings"
 	"testing"
+	"time"
+	"unicode/utf8"
 
 	"github.com/KevinCFechtel/ColimaStatus/internal/autostart"
 	"github.com/KevinCFechtel/ColimaStatus/internal/colima"
@@ -174,6 +177,53 @@ func TestAutostartToggle(t *testing.T) {
 				test.wantEnabled,
 				test.wantCanToggle,
 			)
+		}
+	}
+}
+
+// A status this version does not recognize has to reach the user verbatim,
+// because that is the only clue about what Colima actually reported.
+func TestProfilePresentationNamesAnUnknownStatus(t *testing.T) {
+	t.Parallel()
+
+	texts := localization.MustNew("en")
+	profile := colima.Profile{Name: "default", State: colima.StateUnknown, RawStatus: "Starting"}
+	if got := profilePresentation(texts, profile); !strings.Contains(got, "Starting") {
+		t.Fatalf("profilePresentation() = %q, want it to name the reported status", got)
+	}
+
+	withoutStatus := colima.Profile{Name: "default", State: colima.StateUnknown}
+	if got := profilePresentation(texts, withoutStatus); got == "" {
+		t.Fatal("profilePresentation() = empty for an unknown state without a raw status")
+	}
+}
+
+func TestShortErrorCutsOnARuneBoundary(t *testing.T) {
+	t.Parallel()
+
+	got := shortError(errors.New(strings.Repeat("ä", 120)))
+	if !utf8.ValidString(got) {
+		t.Fatalf("shortError() = %q, want valid UTF-8", got)
+	}
+	if !strings.HasSuffix(got, "…") {
+		t.Fatalf("shortError() = %q, want the ellipsis marker", got)
+	}
+}
+
+func TestCheckedTooltipStatesWhereUpdatesComeFrom(t *testing.T) {
+	t.Parallel()
+
+	app := &App{texts: localization.MustNew("en")}
+	checkedAt := time.Date(2026, 9, 27, 14, 30, 5, 0, time.UTC)
+
+	active := app.checkedTooltip(checkedAt, true)
+	fallback := app.checkedTooltip(checkedAt, false)
+	if active == fallback {
+		t.Fatal("checkedTooltip() does not distinguish live updates from the periodic fallback")
+	}
+	for _, tooltip := range []string{active, fallback} {
+		if !strings.Contains(tooltip, "2026") {
+			t.Fatalf("checkedTooltip() = %q, want it to contain the timestamp", tooltip)
 		}
 	}
 }

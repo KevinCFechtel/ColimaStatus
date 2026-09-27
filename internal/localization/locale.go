@@ -7,11 +7,12 @@ import (
 	"golang.org/x/text/language"
 )
 
-const languageOverrideEnvironment = "COLIMASTATUS_LANGUAGE"
-
 // DetectedLanguages returns normalized language preferences in priority order.
-func DetectedLanguages() []string {
-	if override := os.Getenv(languageOverrideEnvironment); override != "" {
+// The override comes from the configuration, which has already merged the
+// COLIMASTATUS_LANGUAGE environment variable; an empty override means "follow
+// the operating system".
+func DetectedLanguages(override string) []string {
+	if override != "" {
 		if preferences := normalizePreferences(splitLanguageList(override)); len(preferences) > 0 {
 			return preferences
 		}

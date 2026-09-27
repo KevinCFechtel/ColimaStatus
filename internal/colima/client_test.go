@@ -85,8 +85,8 @@ func TestClientActionsUseProfileAndForce(t *testing.T) {
 		t.Fatalf("Stop() error = %v", err)
 	}
 	want := []runnerCall{
-		{executable: "colima", args: []string{"start", "work"}},
-		{executable: "colima", args: []string{"stop", "work", "--force"}},
+		{executable: "colima", args: []string{"start", "-p", "work"}},
+		{executable: "colima", args: []string{"stop", "-p", "work", "--force"}},
 	}
 	if !reflect.DeepEqual(runner.calls, want) {
 		t.Fatalf("runner calls = %#v, want %#v", runner.calls, want)

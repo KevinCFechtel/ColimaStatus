@@ -23,6 +23,10 @@
     "description": "Status for an unknown Colima profile state.",
     "other": "Unknown Colima status ({{.Name}})"
   },
+  "Profile.UnknownWithStatus": {
+    "description": "Status for a Colima state the app does not recognize, naming the status Colima reported.",
+    "other": "Colima reports {{.Status}} ({{.Name}})"
+  },
   "Tray.AutostartApprovalTitle": {
     "description": "Launch at login menu title when macOS approval is required.",
     "other": "Launch at login (approval required)"
@@ -111,6 +115,22 @@
     "description": "Tooltip for the immediate Colima status check action.",
     "other": "Check Colima status now"
   },
+  "Tray.ShowConfiguration": {
+    "description": "Menu action that reveals the settings file in Finder.",
+    "other": "Show settings in Finder …"
+  },
+  "Tray.ShowConfigurationTooltip": {
+    "description": "Tooltip for the action that reveals the settings file.",
+    "other": "Reveal config.json, which sets the profile and the check interval"
+  },
+  "Tray.ShowLog": {
+    "description": "Menu action that reveals the log file in Finder.",
+    "other": "Show log in Finder …"
+  },
+  "Tray.ShowLogTooltip": {
+    "description": "Tooltip for the action that reveals the log file.",
+    "other": "Reveal the ColimaStatus log file"
+  },
   "Tray.Start": {
     "description": "Menu action that starts Colima.",
     "other": "Start"
@@ -146,5 +166,13 @@
   "Tray.UnavailableTooltip": {
     "description": "Menu bar tooltip when the Colima status is unavailable.",
     "other": "ColimaStatus – Error"
+  },
+  "Tray.WatchActive": {
+    "description": "Tooltip line shown while Lima lifecycle events are being received.",
+    "other": "Live updates are active"
+  },
+  "Tray.WatchFallback": {
+    "description": "Tooltip line shown when only the periodic safety check is available.",
+    "other": "Live updates are unavailable, checking periodically"
   }
 }

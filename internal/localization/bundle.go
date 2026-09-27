@@ -1,9 +1,13 @@
+// Package localization provides every user-facing ColimaStatus message in
+// the language macOS reports. English is the source and fallback language;
+// the catalogs are embedded, so no files ship beside the binary.
 package localization
 
 import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"log"
 	"sort"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -64,21 +68,25 @@ func MustNew(preferences ...string) *Strings {
 	return strings
 }
 
-func NewDetected() (*Strings, error) {
-	return New(DetectedLanguages()...)
+func NewDetected(override string) (*Strings, error) {
+	return New(DetectedLanguages(override)...)
 }
 
 func (strings *Strings) Language() language.Tag {
 	return strings.language
 }
 
+// localize never fails the caller. A message that cannot be rendered falls back
+// to its English source text, because this runs inside menu callbacks where a
+// panic would take the whole app down over a catalog problem.
 func (strings *Strings) localize(message *i18n.Message, data any) string {
 	value, err := strings.localizer.Localize(&i18n.LocalizeConfig{
 		DefaultMessage: message,
 		TemplateData:   data,
 	})
-	if err != nil {
-		panic(fmt.Sprintf("localize %q: %v", message.ID, err))
+	if err == nil {
+		return value
 	}
-	return value
+	log.Printf("message %q could not be localized, using the source text: %v", message.ID, err)
+	return message.Other
 }

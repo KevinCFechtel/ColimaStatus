@@ -1,0 +1,51 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - errorlint
+    - gocritic
+    - misspell
+    - nilerr
+    - noctx
+    - perfsprint
+    - revive
+    - unconvert
+    - usestdlibvars
+    - whitespace
+
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # ST1005 forbids capitalized error strings. ColimaStatus's errors start
+        # with proper nouns ("Colima ...", "Lima ...", "Login Items ..."), which
+        # is the accepted exception to that rule, so the check would only
+        # produce grammatically wrong messages here.
+        - "-ST1005"
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    perfsprint:
+      # fmt.Errorf with %w is the intended way to wrap errors here.
+      errorf: false
+
+  exclusions:
+    rules:
+      # cgo generates a comparison that gocritic reads as `x == x`. The finding
+      # points at the cgo call site, not at code in this repository.
+      - path: native_darwin\.go$
+        linters:
+          - gocritic
+
+formatters:
+  enable:
+    - gofmt

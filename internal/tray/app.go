@@ -1,12 +1,18 @@
+// Package tray renders the ColimaStatus menu bar item: the menu state, the
+// available actions, and the template icons for each Colima state.
 package tray
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"fyne.io/systray"
 
@@ -16,13 +22,31 @@ import (
 	"github.com/KevinCFechtel/ColimaStatus/internal/monitor"
 )
 
-const autostartRefreshInterval = 5 * time.Second
+// autostartRefreshInterval only has to notice a change the user made in System
+// Settings, which is rare. Every tick crosses into Objective-C to ask
+// SMAppService, so a short interval would burn energy for a value that almost
+// never moves; the toggle itself refreshes immediately.
+const autostartRefreshInterval = 30 * time.Second
+
+// Options carries everything the menu bar app needs. It is a struct rather
+// than a parameter list because the paths are only used for the reveal actions
+// and would otherwise make the call unreadable.
+type Options struct {
+	Controller monitor.Controller
+	Interval   time.Duration
+	Autostart  autostart.Controller
+	Texts      *localization.Strings
+	LogPath    string
+	ConfigPath string
+}
 
 type App struct {
 	controller monitor.Controller
 	interval   time.Duration
 	autostart  autostart.Controller
 	texts      *localization.Strings
+	logPath    string
+	configPath string
 
 	ctx     context.Context
 	cancel  context.CancelFunc
@@ -37,21 +61,20 @@ type App struct {
 	refreshItem           *systray.MenuItem
 	autostartItem         *systray.MenuItem
 	autostartSettingsItem *systray.MenuItem
+	showLogItem           *systray.MenuItem
+	showConfigItem        *systray.MenuItem
 	quitItem              *systray.MenuItem
 }
 
-func New(
-	controller monitor.Controller,
-	interval time.Duration,
-	autostartController autostart.Controller,
-	texts *localization.Strings,
-) *App {
+func New(options Options) *App {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &App{
-		controller: controller,
-		interval:   interval,
-		autostart:  autostartController,
-		texts:      texts,
+		controller: options.Controller,
+		interval:   options.Interval,
+		autostart:  options.Autostart,
+		texts:      options.Texts,
+		logPath:    options.LogPath,
+		configPath: options.ConfigPath,
 		ctx:        ctx,
 		cancel:     cancel,
 	}
@@ -84,6 +107,12 @@ func (app *App) OnReady() {
 	)
 	app.autostartSettingsItem.Hide()
 	systray.AddSeparator()
+	app.showConfigItem = systray.AddMenuItem(
+		app.texts.ShowConfiguration(),
+		app.texts.ShowConfigurationTooltip(),
+	)
+	app.showLogItem = systray.AddMenuItem(app.texts.ShowLog(), app.texts.ShowLogTooltip())
+	systray.AddSeparator()
 	app.quitItem = systray.AddMenuItem(app.texts.Quit(), app.texts.QuitTooltip())
 
 	app.monitor = monitor.New(app.controller, app.interval, app.render)
@@ -106,15 +135,27 @@ func (app *App) startBackgroundTasks() {
 		defer app.wait.Done()
 		ticker := time.NewTicker(autostartRefreshInterval)
 		defer ticker.Stop()
+		// Every click channel is checked for closure. systray closes them all
+		// when the menu goes away, and a receive from a closed channel succeeds
+		// immediately, so a case that ignores the flag would spin.
 		for {
 			select {
 			case <-app.ctx.Done():
 				return
-			case <-app.startItem.ClickedCh:
+			case _, open := <-app.startItem.ClickedCh:
+				if !open {
+					return
+				}
 				app.monitor.Trigger(monitor.ActionStart)
-			case <-app.stopItem.ClickedCh:
+			case _, open := <-app.stopItem.ClickedCh:
+				if !open {
+					return
+				}
 				app.monitor.Trigger(monitor.ActionStop)
-			case <-app.refreshItem.ClickedCh:
+			case _, open := <-app.refreshItem.ClickedCh:
+				if !open {
+					return
+				}
 				app.monitor.Trigger(monitor.ActionRefresh)
 			case _, open := <-app.autostartItem.ClickedCh:
 				if !open {
@@ -126,9 +167,22 @@ func (app *App) startBackgroundTasks() {
 					return
 				}
 				app.openAutostartSettings()
+			case _, open := <-app.showConfigItem.ClickedCh:
+				if !open {
+					return
+				}
+				app.reveal(app.configPath)
+			case _, open := <-app.showLogItem.ClickedCh:
+				if !open {
+					return
+				}
+				app.reveal(app.logPath)
 			case <-ticker.C:
 				app.refreshAutostart()
-			case <-app.quitItem.ClickedCh:
+			case _, open := <-app.quitItem.ClickedCh:
+				if !open {
+					return
+				}
 				app.cancel()
 				systray.Quit()
 				return
@@ -154,7 +208,7 @@ func (app *App) render(state monitor.State) {
 		return
 	}
 
-	app.renderProfile(*state.Profile)
+	app.renderProfile(*state.Profile, state.Watching)
 	if state.Err != nil {
 		app.renderError(state.Err)
 	}
@@ -162,9 +216,10 @@ func (app *App) render(state monitor.State) {
 
 func (app *App) renderBusy(action monitor.Action) {
 	title := app.texts.Checking()
-	if action == monitor.ActionStart {
+	switch action {
+	case monitor.ActionStart:
 		title = app.texts.Starting()
-	} else if action == monitor.ActionStop {
+	case monitor.ActionStop:
 		title = app.texts.Stopping()
 	}
 	app.setIcon(false)
@@ -177,7 +232,7 @@ func (app *App) renderBusy(action monitor.Action) {
 	app.refreshItem.Disable()
 }
 
-func (app *App) renderProfile(profile colima.Profile) {
+func (app *App) renderProfile(profile colima.Profile, watching bool) {
 	status := profilePresentation(app.texts, profile)
 	app.setIcon(profile.State == colima.StateRunning)
 	systray.SetTooltip("ColimaStatus – " + status)
@@ -190,7 +245,7 @@ func (app *App) renderProfile(profile colima.Profile) {
 		app.detailsItem.Hide()
 	}
 	app.checkedItem.SetTitle(app.texts.LastChecked(profile.CheckedAt))
-	app.checkedItem.SetTooltip(app.texts.FormatTimestamp(profile.CheckedAt))
+	app.checkedItem.SetTooltip(app.checkedTooltip(profile.CheckedAt, watching))
 	app.checkedItem.Show()
 
 	app.startItem.Enable()
@@ -205,8 +260,9 @@ func (app *App) renderProfile(profile colima.Profile) {
 		app.startItem.Disable()
 		app.stopItem.SetTitle(app.texts.ForceStop())
 	default:
-		app.startItem.Disable()
-		app.stopItem.Disable()
+		// A status this version does not recognize is a Colima that moved on,
+		// not a broken one. Both actions stay available: disabling them would
+		// turn any future status value into a menu with no way to act.
 	}
 }
 
@@ -374,6 +430,9 @@ func profilePresentation(texts *localization.Strings, profile colima.Profile) st
 	case colima.StateBroken:
 		return texts.ProfileBroken(name)
 	default:
+		if status := strings.TrimSpace(profile.RawStatus); status != "" {
+			return texts.ProfileUnknownWithStatus(name, status)
+		}
 		return texts.ProfileUnknown(name)
 	}
 }
@@ -403,11 +462,43 @@ func formatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f GiB", float64(bytes)/float64(gibibyte))
 }
 
+// shortError cuts an error down to one menu row. The cut lands on a rune
+// boundary: error text carries localized messages and user paths, so cutting by
+// byte would split a multi-byte character into replacement characters.
 func shortError(err error) string {
-	message := err.Error()
 	const maximumLength = 90
+	message := err.Error()
 	if len(message) <= maximumLength {
 		return message
 	}
-	return message[:maximumLength] + "…"
+	cut := maximumLength
+	for cut > 0 && !utf8.RuneStart(message[cut]) {
+		cut--
+	}
+	return message[:cut] + "\u2026"
+}
+
+// checkedTooltip explains where the next update will come from, so that a slow
+// reaction to a Colima change is attributable instead of looking like a bug.
+func (app *App) checkedTooltip(checkedAt time.Time, watching bool) string {
+	availability := app.texts.WatchFallback()
+	if watching {
+		availability = app.texts.WatchActive()
+	}
+	return app.texts.FormatTimestamp(checkedAt) + " · " + availability
+}
+
+// reveal selects a file in Finder. A file that does not exist yet cannot be
+// selected, so its directory is opened instead.
+func (app *App) reveal(path string) {
+	if path == "" {
+		return
+	}
+	arguments := []string{"-R", path}
+	if _, err := os.Stat(path); err != nil {
+		arguments = []string{filepath.Dir(path)}
+	}
+	if err := exec.CommandContext(app.ctx, "open", arguments...).Run(); err != nil {
+		log.Printf("%s could not be revealed in Finder: %v", path, err)
+	}
 }

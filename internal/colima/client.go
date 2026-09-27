@@ -1,3 +1,5 @@
+// Package colima locates the Colima executable, runs its commands, parses the
+// resulting profile status, and streams Lima lifecycle events.
 package colima
 
 import (
@@ -69,26 +71,25 @@ func (client *Client) Status(ctx context.Context) (Profile, error) {
 }
 
 func (client *Client) Start(ctx context.Context) error {
-	return client.runAction(ctx, "start")
+	return client.run(ctx, "Colima could not be started", client.profileArgs("start")...)
 }
 
 func (client *Client) Stop(ctx context.Context, force bool) error {
-	args := []string{"stop"}
-	if client.profile != defaultProfile {
-		args = append(args, client.profile)
-	}
+	args := client.profileArgs("stop")
 	if force {
 		args = append(args, "--force")
 	}
 	return client.run(ctx, "Colima could not be stopped", args...)
 }
 
-func (client *Client) runAction(ctx context.Context, action string) error {
-	args := []string{action}
-	if client.profile != defaultProfile {
-		args = append(args, client.profile)
+// profileArgs selects the profile with the documented global -p flag rather
+// than the positional form. Both work today, but -p is the one Colima's help
+// describes for every subcommand, so it is the safer contract to depend on.
+func (client *Client) profileArgs(action string) []string {
+	if client.profile == defaultProfile {
+		return []string{action}
 	}
-	return client.run(ctx, "Colima could not be started", args...)
+	return []string{action, "-p", client.profile}
 }
 
 func (client *Client) run(ctx context.Context, message string, args ...string) error {

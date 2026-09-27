@@ -71,10 +71,13 @@ func TestNormalizePreferences(t *testing.T) {
 }
 
 func TestExplicitLanguageOverride(t *testing.T) {
-	t.Setenv(languageOverrideEnvironment, "de_DE.UTF-8")
-	got := DetectedLanguages()
-	if !reflect.DeepEqual(got, []string{"de-DE"}) {
+	t.Parallel()
+
+	if got := DetectedLanguages("de_DE.UTF-8"); !reflect.DeepEqual(got, []string{"de-DE"}) {
 		t.Fatalf("DetectedLanguages() = %#v, want German override", got)
+	}
+	if got := DetectedLanguages("not a language"); len(got) == 0 {
+		t.Fatal("DetectedLanguages() = empty, want the detected languages when the override is unusable")
 	}
 }
 

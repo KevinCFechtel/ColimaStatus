@@ -1,8 +1,12 @@
+// Package monitor serializes Colima status checks and actions. It combines
+// a safety interval, debounced Lima lifecycle events, and bounded retry so
+// that no two operations ever overlap.
 package monitor
 
 import (
 	"context"
 	"errors"
+	"log"
 	"sync/atomic"
 	"time"
 
@@ -31,6 +35,11 @@ type State struct {
 	Profile *colima.Profile
 	Busy    Action
 	Err     error
+	// Watching reports whether Lima lifecycle events are currently being
+	// received. When it is false the safety interval is the only source of
+	// updates, which the menu says out loud rather than leaving the user to
+	// wonder why a change took minutes to appear.
+	Watching bool
 }
 
 type Monitor struct {
@@ -40,6 +49,7 @@ type Monitor struct {
 	actions    chan Action
 	events     chan struct{}
 	running    atomic.Bool
+	watching   atomic.Bool
 	latest     *colima.Profile
 
 	eventDebounce time.Duration
@@ -116,10 +126,17 @@ func (monitor *Monitor) watch(ctx context.Context, source EventSource) {
 	retryDelay := monitor.retryMinimum
 	for {
 		startedAt := time.Now()
+		monitor.watching.Store(true)
 		err := source.Watch(ctx, monitor.notifyEvent)
-		if ctx.Err() != nil || errors.Is(err, colima.ErrWatchUnsupported) {
+		monitor.watching.Store(false)
+		if ctx.Err() != nil {
 			return
 		}
+		if errors.Is(err, colima.ErrWatchUnsupported) {
+			log.Printf("Lima event watching is unavailable, falling back to periodic checks: %v", err)
+			return
+		}
+		log.Printf("Lima event stream ended, retrying: %v", err)
 		if time.Since(startedAt) >= monitor.retryMaximum {
 			retryDelay = monitor.retryMinimum
 		}
@@ -145,10 +162,11 @@ func (monitor *Monitor) notifyEvent() {
 	}
 }
 
+// Trigger requests an action. A request that arrives while another operation
+// is running stays in the queue and is performed afterwards instead of being
+// dropped, so that a click during a long start is not silently lost. The queue
+// holds one action: a second request while one is already waiting is redundant.
 func (monitor *Monitor) Trigger(action Action) {
-	if monitor.running.Load() {
-		return
-	}
 	select {
 	case monitor.actions <- action:
 	default:
@@ -161,7 +179,7 @@ func (monitor *Monitor) perform(ctx context.Context, action Action) {
 	}
 	defer monitor.running.Store(false)
 
-	monitor.onState(State{Profile: monitor.latest, Busy: action})
+	monitor.onState(State{Profile: monitor.latest, Busy: action, Watching: monitor.watching.Load()})
 	var actionErr error
 	switch action {
 	case ActionStart:
@@ -179,5 +197,5 @@ func (monitor *Monitor) perform(ctx context.Context, action Action) {
 	if err == nil {
 		err = statusErr
 	}
-	monitor.onState(State{Profile: monitor.latest, Err: err})
+	monitor.onState(State{Profile: monitor.latest, Err: err, Watching: monitor.watching.Load()})
 }

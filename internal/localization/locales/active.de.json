@@ -29,6 +29,11 @@
     "hash": "sha1-de369471684005310b64f93cdc12a1d2a60589e9",
     "other": "Unbekannter Colima-Status ({{.Name}})"
   },
+  "Profile.UnknownWithStatus": {
+    "description": "Status for a Colima state the app does not recognize, naming the status Colima reported.",
+    "hash": "sha1-1a94304ad54289fde740c11f71d2d4cfad8a779c",
+    "other": "Colima meldet {{.Status}} ({{.Name}})"
+  },
   "Tray.AutostartApprovalTitle": {
     "description": "Launch at login menu title when macOS approval is required.",
     "hash": "sha1-6cf886af16c325a72f131c7272a4a39f0d36a0be",
@@ -139,6 +144,26 @@
     "hash": "sha1-308a8d0865b325bf6aa781cd938267d0c9afa4ee",
     "other": "Colima-Status sofort prüfen"
   },
+  "Tray.ShowConfiguration": {
+    "description": "Menu action that reveals the settings file in Finder.",
+    "hash": "sha1-ee3edab40dd0cf6421554b5d6a6ad0911ca1d572",
+    "other": "Einstellungen im Finder zeigen …"
+  },
+  "Tray.ShowConfigurationTooltip": {
+    "description": "Tooltip for the action that reveals the settings file.",
+    "hash": "sha1-b8198b975e38f0ac0ecd8c15c5603735b2209fcc",
+    "other": "config.json anzeigen, dort werden Profil und Prüfintervall gesetzt"
+  },
+  "Tray.ShowLog": {
+    "description": "Menu action that reveals the log file in Finder.",
+    "hash": "sha1-2e223c0f2729cd8e84ab5d7d4ba2c56b44ef8bd7",
+    "other": "Protokoll im Finder zeigen …"
+  },
+  "Tray.ShowLogTooltip": {
+    "description": "Tooltip for the action that reveals the log file.",
+    "hash": "sha1-60395d4035323a2a5dac8c5ac1ead8f4deddb9b6",
+    "other": "Die Protokolldatei von ColimaStatus im Finder anzeigen"
+  },
   "Tray.Start": {
     "description": "Menu action that starts Colima.",
     "hash": "sha1-a6859edf9a5d99a85d316c8e348e75199992a8ef",
@@ -183,5 +208,15 @@
     "description": "Menu bar tooltip when the Colima status is unavailable.",
     "hash": "sha1-88eeb73f6f25f7842e1c5e41595dbfe9deafd0fe",
     "other": "ColimaStatus – Fehler"
+  },
+  "Tray.WatchActive": {
+    "description": "Tooltip line shown while Lima lifecycle events are being received.",
+    "hash": "sha1-89067bd1efcdaf9b74e20a3a784b0243baeff629",
+    "other": "Live-Aktualisierung ist aktiv"
+  },
+  "Tray.WatchFallback": {
+    "description": "Tooltip line shown when only the periodic safety check is available.",
+    "hash": "sha1-617c41b71758205cc22c33d511767d7b9a298607",
+    "other": "Live-Aktualisierung nicht verfügbar, es wird regelmäßig geprüft"
   }
 }

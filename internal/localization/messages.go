@@ -40,4 +40,11 @@ var (
 	messageProfileBroken                   = &i18n.Message{ID: "Profile.Broken", Description: "Status for a broken Colima profile.", Other: "Colima is broken ({{.Name}})"}
 	messageProfileUnknown                  = &i18n.Message{ID: "Profile.Unknown", Description: "Status for an unknown Colima profile state.", Other: "Unknown Colima status ({{.Name}})"}
 	messageErrorColimaNotFound             = &i18n.Message{ID: "Error.ColimaNotFound", Description: "Error shown when no Colima executable can be found.", Other: "Colima was not found"}
+	messageProfileUnknownWithStatus        = &i18n.Message{ID: "Profile.UnknownWithStatus", Description: "Status for a Colima state the app does not recognize, naming the status Colima reported.", Other: "Colima reports {{.Status}} ({{.Name}})"}
+	messageTrayShowLog                     = &i18n.Message{ID: "Tray.ShowLog", Description: "Menu action that reveals the log file in Finder.", Other: "Show log in Finder …"}
+	messageTrayShowLogTooltip              = &i18n.Message{ID: "Tray.ShowLogTooltip", Description: "Tooltip for the action that reveals the log file.", Other: "Reveal the ColimaStatus log file"}
+	messageTrayShowConfiguration           = &i18n.Message{ID: "Tray.ShowConfiguration", Description: "Menu action that reveals the settings file in Finder.", Other: "Show settings in Finder …"}
+	messageTrayShowConfigurationTooltip    = &i18n.Message{ID: "Tray.ShowConfigurationTooltip", Description: "Tooltip for the action that reveals the settings file.", Other: "Reveal config.json, which sets the profile and the check interval"}
+	messageTrayWatchActive                 = &i18n.Message{ID: "Tray.WatchActive", Description: "Tooltip line shown while Lima lifecycle events are being received.", Other: "Live updates are active"}
+	messageTrayWatchFallback               = &i18n.Message{ID: "Tray.WatchFallback", Description: "Tooltip line shown when only the periodic safety check is available.", Other: "Live updates are unavailable, checking periodically"}
 )

@@ -6,17 +6,22 @@ VERSION_REPOSITORY_DIR="$(cd -- "${VERSION_SCRIPT_DIR}/.." && pwd)"
 VERSION_FILE="${VERSION_REPOSITORY_DIR}/VERSION"
 BUILD_NUMBER_FILE="${VERSION_REPOSITORY_DIR}/BUILD_NUMBER"
 
+# Lowest macOS version the binary, the app bundle, and the icon catalog target.
+# This is the single source of truth for every build script and for
+# LSMinimumSystemVersion in the generated bundle.
+APP_DEPLOYMENT_TARGET="13.0"
+
 read_version_value() {
   local file_path="$1"
   local value=""
 
   if [[ ! -f "${file_path}" ]]; then
-    echo "Versionsdatei fehlt: ${file_path}" >&2
+    echo "Version file is missing: ${file_path}" >&2
     return 1
   fi
   IFS= read -r value < "${file_path}" || true
   if [[ -z "${value}" ]]; then
-    echo "Versionsdatei ist leer: ${file_path}" >&2
+    echo "Version file is empty: ${file_path}" >&2
     return 1
   fi
   printf '%s' "${value}"
@@ -26,12 +31,12 @@ APP_VERSION="$(read_version_value "${VERSION_FILE}")"
 APP_BUILD_NUMBER="$(read_version_value "${BUILD_NUMBER_FILE}")"
 
 if [[ ! "${APP_VERSION}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-  echo "Ungültige App-Version in VERSION: ${APP_VERSION} (erwartet: MAJOR.MINOR.PATCH)" >&2
+  echo "Invalid app version in VERSION: ${APP_VERSION} (expected MAJOR.MINOR.PATCH)" >&2
   return 1 2>/dev/null || exit 1
 fi
 
 if [[ ! "${APP_BUILD_NUMBER}" =~ ^[1-9][0-9]*$ ]]; then
-  echo "Ungültige Build-Nummer in BUILD_NUMBER: ${APP_BUILD_NUMBER} (erwartet: positive Ganzzahl)" >&2
+  echo "Invalid build number in BUILD_NUMBER: ${APP_BUILD_NUMBER} (expected a positive integer)" >&2
   return 1 2>/dev/null || exit 1
 fi
 
@@ -43,11 +48,12 @@ if command -v git >/dev/null 2>&1 && git -C "${VERSION_REPOSITORY_DIR}" rev-pars
   fi
 fi
 
-export APP_VERSION APP_BUILD_NUMBER APP_COMMIT
+export APP_VERSION APP_BUILD_NUMBER APP_COMMIT APP_DEPLOYMENT_TARGET
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  printf 'Version: %s\nBuild: %s\nCommit: %s\n' \
+  printf 'Version: %s\nBuild: %s\nCommit: %s\nDeployment target: macOS %s\n' \
     "${APP_VERSION}" \
     "${APP_BUILD_NUMBER}" \
-    "${APP_COMMIT}"
+    "${APP_COMMIT}" \
+    "${APP_DEPLOYMENT_TARGET}"
 fi

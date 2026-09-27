@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    # ColimaStatus builds cgo bridges against Foundation and ServiceManagement,
+    # so it can only be verified on a macOS runner.
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check formatting
+        # format.sh rewrites files, which CI cannot detect. Assert instead.
+        run: |
+          unformatted="$(gofmt -l ./cmd ./internal)"
+          if [[ -n "${unformatted}" ]]; then
+            echo "These files are not gofmt-clean:" >&2
+            echo "${unformatted}" >&2
+            exit 1
+          fi
+
+      - name: Vet
+        run: ./Build/vet.sh
+
+      - name: Verify localization catalogs
+        run: ./Build/localization.sh
+
+      - name: Test
+        run: go test -race ./...
+
+      - name: Build app bundle
+        # build.sh also asserts that the linked binary's minimum macOS version
+        # matches APP_DEPLOYMENT_TARGET.
+        run: ./Build/build.sh
+
+      - name: Verify app bundle
+        run: |
+          dist/ColimaStatus.app/Contents/MacOS/ColimaStatus --version
+          plutil -lint dist/ColimaStatus.app/Contents/Info.plist
+          codesign --verify --strict --verbose=2 dist/ColimaStatus.app
+          xcrun vtool -show-build-version dist/ColimaStatus.app/Contents/MacOS/ColimaStatus
+          # A universal bundle must carry both slices. Without the x86_64 one an
+          # Intel Mac gets an app that cannot launch, and Homebrew reports
+          # nothing about the mismatch.
+          archs="$(lipo -archs dist/ColimaStatus.app/Contents/MacOS/ColimaStatus)"
+          echo "Architectures: ${archs}"
+          for required in arm64 x86_64; do
+            if [[ "${archs}" != *"${required}"* ]]; then
+              echo "Missing ${required} slice in the build." >&2
+              exit 1
+            fi
+          done
+
+  lint:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          # Pinned on purpose: an unpinned linter turns an upstream release into
+          # a red build on unrelated pull requests. Bump this deliberately.
+          version: v2.14.0
+
+  vulncheck:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...

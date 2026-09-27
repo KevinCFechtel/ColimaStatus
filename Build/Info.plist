@@ -8,8 +8,6 @@
     <string>ColimaStatus</string>
     <key>CFBundleIdentifier</key>
     <string>dev.kevincfechtel.ColimaStatus</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -25,7 +23,8 @@
     <!-- Replaced from BUILD_NUMBER by Build/build.sh. -->
     <string>0</string>
     <key>LSMinimumSystemVersion</key>
-    <string>11.0</string>
+    <!-- Replaced from APP_DEPLOYMENT_TARGET by Build/build.sh. -->
+    <string>0.0</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSHighResolutionCapable</key>

@@ -106,6 +106,28 @@ func (strings *Strings) ProfileUnknown(name string) string {
 	return strings.localize(messageProfileUnknown, map[string]any{"Name": name})
 }
 
+// ProfileUnknownWithStatus names the status Colima reported, so that a value
+// this version does not know about still reaches the user instead of being
+// flattened to "unknown".
+func (strings *Strings) ProfileUnknownWithStatus(name, status string) string {
+	return strings.localize(messageProfileUnknownWithStatus, map[string]any{"Name": name, "Status": status})
+}
+
+func (strings *Strings) ShowLog() string { return strings.localize(messageTrayShowLog, nil) }
+func (strings *Strings) ShowLogTooltip() string {
+	return strings.localize(messageTrayShowLogTooltip, nil)
+}
+func (strings *Strings) ShowConfiguration() string {
+	return strings.localize(messageTrayShowConfiguration, nil)
+}
+func (strings *Strings) ShowConfigurationTooltip() string {
+	return strings.localize(messageTrayShowConfigurationTooltip, nil)
+}
+func (strings *Strings) WatchActive() string { return strings.localize(messageTrayWatchActive, nil) }
+func (strings *Strings) WatchFallback() string {
+	return strings.localize(messageTrayWatchFallback, nil)
+}
+
 func (strings *Strings) isGerman() bool {
 	base, _ := strings.language.Base()
 	german, _ := language.German.Base()
