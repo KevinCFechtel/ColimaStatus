@@ -1,10 +1,13 @@
 package colima
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync/atomic"
 	"testing"
 )
@@ -187,4 +190,50 @@ func writeExecutable(t *testing.T, content string) string {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 	return path
+}
+
+// Recorded from `limactl watch --json --history` against Lima 2.2.0 with a
+// Colima profile that started and stopped. It is the contract this package
+// does not own: if a Lima release renames or restructures these fields, the
+// app degrades to the safety interval without any error, so the shape is
+// pinned here rather than trusted.
+func TestLifecycleStateAgainstRecordedLimaEvents(t *testing.T) {
+	t.Parallel()
+
+	file, err := os.Open("testdata/lima-watch-2.2.0.jsonl")
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	var states []string
+	var ignored int
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if len(bytes.TrimSpace(scanner.Bytes())) == 0 {
+			continue
+		}
+		state, relevant, err := limaLifecycleState(scanner.Bytes(), "colima")
+		if err != nil {
+			t.Fatalf("limaLifecycleState() error = %v for %s", err, scanner.Text())
+		}
+		if !relevant {
+			ignored++
+			continue
+		}
+		states = append(states, state)
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("Scan() error = %v", err)
+	}
+
+	// Port forwarding, SSH and vsock noise must not wake the monitor: those
+	// events arrive continuously while a profile runs.
+	if ignored != 5 {
+		t.Errorf("ignored %d events, want the 5 non-lifecycle ones", ignored)
+	}
+	want := []string{"running", "running", "running", "running", "exiting"}
+	if !slices.Equal(states, want) {
+		t.Fatalf("lifecycle states = %#v, want %#v", states, want)
+	}
 }

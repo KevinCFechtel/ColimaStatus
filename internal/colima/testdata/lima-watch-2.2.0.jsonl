@@ -1,0 +1,10 @@
+{"instance":"colima","event":{"time":"2026-08-15T18:42:10.851206+02:00","status":{"vsock":{"type":"failed","reason":"SSH server does not seem to be running on vsock port"}}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:11.359485+02:00","status":{"sshLocalPort":53050}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:11.796715+02:00","status":{"sshLocalPort":53050,"portForward":{"type":"not-forwarding","protocol":"tcp","guestAddr":"0.0.0.0:22"}}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:11.808738+02:00","status":{"sshLocalPort":53050,"portForward":{"type":"not-forwarding","protocol":"tcp","guestAddr":"192.168.5.1:53"}}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:11.815695+02:00","status":{"sshLocalPort":53050,"portForward":{"type":"forwarding","protocol":"tcp","guestAddr":"127.0.0.1:53","hostAddr":"127.0.0.1:53"}}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:11.826749+02:00","status":{"running":true,"sshLocalPort":53050}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:11.853864+02:00","status":{"running":true,"sshLocalPort":53050,"portForward":{"type":"not-forwarding","protocol":"tcp","guestAddr":"[fe80::5055:55ff:febd:cb5e]:53"}}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:11.861036+02:00","status":{"running":true,"sshLocalPort":53050,"portForward":{"type":"forwarding","protocol":"tcp","guestAddr":"[::1]:53","hostAddr":"127.0.0.1:53"}}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:11.910261+02:00","status":{"running":true,"sshLocalPort":53050,"portForward":{"type":"not-forwarding","protocol":"tcp","guestAddr":"[::]:22"}}}}
+{"instance":"colima","event":{"time":"2026-08-15T18:42:26.126649+02:00","status":{"exiting":true}}}
