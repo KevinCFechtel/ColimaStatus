@@ -1,6 +1,12 @@
 module github.com/KevinCFechtel/ColimaStatus
 
-go 1.25
+// The Go toolchain determines the macOS floor of every produced binary:
+// Go 1.27 requires macOS 13 or later. APP_DEPLOYMENT_TARGET in
+// Build/version.sh must match; Build/build.sh verifies the linked binary
+// against it and fails the build if they drift apart.
+go 1.27
+
+toolchain go1.27.1
 
 tool github.com/nicksnyder/go-i18n/v2/goi18n
 

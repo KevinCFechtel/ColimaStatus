@@ -40,7 +40,7 @@ cloud account or a background service of its own.
 
 - macOS 13 or later
 - [Colima](https://github.com/abiosoft/colima)
-- Go 1.25 or later and Xcode Command Line Tools when building from source
+- Go 1.27 or later and Xcode Command Line Tools when building from source
 
 Install Colima with Homebrew if it is not already available:
 
