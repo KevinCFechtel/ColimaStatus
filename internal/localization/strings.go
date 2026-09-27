@@ -1,10 +1,6 @@
 package localization
 
-import (
-	"time"
-
-	"golang.org/x/text/language"
-)
+import "time"
 
 func (strings *Strings) TrayTooltip() string { return strings.localize(messageTrayTooltip, nil) }
 func (strings *Strings) Checking() string    { return strings.localize(messageTrayChecking, nil) }
@@ -76,18 +72,45 @@ func (strings *Strings) LastChecked(checkedAt time.Time) string {
 	return strings.localize(messageTrayLastChecked, map[string]any{"Time": strings.FormatTime(checkedAt)})
 }
 
+// FormatTimestamp and FormatTime take their layout from the catalog, so a new
+// language is a translation rather than a change to this file.
 func (strings *Strings) FormatTimestamp(value time.Time) string {
-	if strings.isGerman() {
-		return value.Format("02.01.2006, 15:04:05")
-	}
-	return value.Format("Jan 2, 2006, 3:04:05 PM")
+	return value.Format(strings.localize(messageFormatTimestamp, nil))
 }
 
 func (strings *Strings) FormatTime(value time.Time) string {
-	if strings.isGerman() {
-		return value.Format("15:04:05")
-	}
-	return value.Format("3:04:05 PM")
+	return value.Format(strings.localize(messageFormatTime, nil))
+}
+
+// There is one method per failure rather than one taking a domain type, so
+// that this package stays a provider of strings and does not need to know the
+// domain's error taxonomy. The mapping lives in the presentation layer.
+
+// StatusFailed names a failed status read.
+func (strings *Strings) StatusFailed() string {
+	return strings.localize(messageErrorStatusFailed, nil)
+}
+
+// StartFailed names a failed start.
+func (strings *Strings) StartFailed() string {
+	return strings.localize(messageErrorStartFailed, nil)
+}
+
+// StopFailed names a failed stop.
+func (strings *Strings) StopFailed() string {
+	return strings.localize(messageErrorStopFailed, nil)
+}
+
+// Timeout names a command that exceeded its deadline.
+func (strings *Strings) Timeout() string { return strings.localize(messageErrorTimeout, nil) }
+
+// UnknownFailure names a failure that fits no other category.
+func (strings *Strings) UnknownFailure() string {
+	return strings.localize(messageErrorUnknown, nil)
+}
+
+func (strings *Strings) DetailHint() string {
+	return strings.localize(messageErrorDetailHint, nil)
 }
 
 func (strings *Strings) ProfileRunning(name string) string {
@@ -126,10 +149,4 @@ func (strings *Strings) ShowConfigurationTooltip() string {
 func (strings *Strings) WatchActive() string { return strings.localize(messageTrayWatchActive, nil) }
 func (strings *Strings) WatchFallback() string {
 	return strings.localize(messageTrayWatchFallback, nil)
-}
-
-func (strings *Strings) isGerman() bool {
-	base, _ := strings.language.Base()
-	german, _ := language.German.Base()
-	return base == german
 }

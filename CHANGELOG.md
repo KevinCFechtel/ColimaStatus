@@ -38,9 +38,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   both directories, since Colima invokes `limactl` internally.
 - Native launch at login through `SMAppService`, with a direct link to the
   Login Items panel when macOS requires approval.
+- The status is re-read when the Mac wakes from sleep. Go's timers read
+  `mach_absolute_time`, which is suspended along with the system, so a closed
+  laptop never ran the check it was scheduled for and the menu showed whatever
+  was true before the lid was closed. Waking also releases the event watcher
+  from its retry backoff, since the stream most likely died with the machine.
+- `--help` describing the flags, the file locations and the environment
+  variables, and an unrecognized argument is reported instead of silently
+  starting the app with settings the user believes they changed.
 - English and German localization following the macOS language, with the
   monochrome Colima llama as a template menu bar icon and an adaptive app icon
-  for the light, dark and tinted appearances.
+  for the light, dark and tinted appearances. Failures are classified in the
+  domain and named in the selected language by the menu; the technical cause
+  goes to the log instead of into a menu row. Date and time layouts live in the
+  message catalogs, so a further language needs no Go change.
 - Universal release binaries covering Apple Silicon and Intel in one download,
   signed, notarized and stapled, distributed as a Homebrew cask generated from
   the published artifact.

@@ -52,12 +52,13 @@ func (NativeController) SetEnabled(enabled bool) (Status, error) {
 }
 
 func (NativeController) OpenSettings() error {
-	if C.ColimaStatusOpenAutostartSettings() == 0 {
-		return errors.New("Login Items settings require macOS 13 or later")
-	}
+	C.ColimaStatusOpenAutostartSettings()
 	return nil
 }
 
+// Unsupported is unreachable on macOS 13 and later, which the deployment target
+// guarantees, but the mapping stays complete so that an unexpected value is
+// reported rather than silently treated as a working state.
 func statusFromNative(nativeStatus C.int) (Status, error) {
 	switch nativeStatus {
 	case 0:

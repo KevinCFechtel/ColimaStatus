@@ -3,13 +3,13 @@ package tray
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/KevinCFechtel/ColimaStatus/internal/autostart"
 	"github.com/KevinCFechtel/ColimaStatus/internal/colima"
@@ -104,15 +104,6 @@ func TestProfileDetails(t *testing.T) {
 	}
 }
 
-func TestShortError(t *testing.T) {
-	t.Parallel()
-
-	message := "1234567890"
-	if got := shortError(errors.New(message)); got != message {
-		t.Fatalf("shortError() = %q, want %q", got, message)
-	}
-}
-
 func TestAutostartMenuState(t *testing.T) {
 	t.Parallel()
 
@@ -198,18 +189,6 @@ func TestProfilePresentationNamesAnUnknownStatus(t *testing.T) {
 	}
 }
 
-func TestShortErrorCutsOnARuneBoundary(t *testing.T) {
-	t.Parallel()
-
-	got := shortError(errors.New(strings.Repeat("ä", 120)))
-	if !utf8.ValidString(got) {
-		t.Fatalf("shortError() = %q, want valid UTF-8", got)
-	}
-	if !strings.HasSuffix(got, "…") {
-		t.Fatalf("shortError() = %q, want the ellipsis marker", got)
-	}
-}
-
 func TestCheckedTooltipStatesWhereUpdatesComeFrom(t *testing.T) {
 	t.Parallel()
 
@@ -225,5 +204,52 @@ func TestCheckedTooltipStatesWhereUpdatesComeFrom(t *testing.T) {
 		if !strings.Contains(tooltip, "2026") {
 			t.Fatalf("checkedTooltip() = %q, want it to contain the timestamp", tooltip)
 		}
+	}
+}
+
+// A Colima failure must be named in the selected language, and the technical
+// cause must not leak into the menu row.
+func TestRenderErrorIsLocalizedAndHidesTheCause(t *testing.T) {
+	t.Parallel()
+
+	german := localization.MustNew("de")
+	cause := fmt.Errorf("exec: %q: executable file not found", "colima")
+
+	for _, test := range []struct {
+		name string
+		kind colima.Kind
+	}{
+		{name: "unavailable", kind: colima.KindUnavailable},
+		{name: "status", kind: colima.KindStatus},
+		{name: "start", kind: colima.KindStart},
+		{name: "stop", kind: colima.KindStop},
+		{name: "timeout", kind: colima.KindTimeout},
+		{name: "unknown", kind: colima.KindUnknown},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			failure := &colima.Error{Kind: test.kind, Cause: cause}
+			message := failureMessage(german, colima.KindOf(failure))
+			if message == "" {
+				t.Fatal("FailureMessage() = empty")
+			}
+			if strings.Contains(message, "executable file not found") {
+				t.Fatalf("FailureMessage() = %q, want the technical cause left out", message)
+			}
+			if english := failureMessage(localization.MustNew("en"), test.kind); english == message {
+				t.Fatalf("FailureMessage() = %q in both languages, want a translation", message)
+			}
+		})
+	}
+}
+
+// An error from outside the package must still produce a usable row rather
+// than an empty one.
+func TestFailureMessageHandlesForeignErrors(t *testing.T) {
+	t.Parallel()
+
+	if got := failureMessage(localization.MustNew("en"), colima.KindOf(errors.New("boom"))); got == "" {
+		t.Fatal("FailureMessage() = empty for an error from another package")
 	}
 }

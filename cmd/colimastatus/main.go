@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -20,11 +20,54 @@ import (
 )
 
 func main() {
-	if len(os.Args) == 2 && os.Args[1] == "--version" {
-		fmt.Printf("ColimaStatus %s\n", buildinfo.Summary())
-		return
+	// Only two flags exist, so this stays hand-rolled rather than pulling in
+	// the flag package for an app whose real interface is the menu. An
+	// unrecognized argument is reported instead of silently starting the app
+	// with settings the user believes they changed.
+	for _, argument := range os.Args[1:] {
+		switch argument {
+		case "--version", "-v":
+			fmt.Printf("ColimaStatus %s\n", buildinfo.Summary())
+			return
+		case "--help", "-h":
+			printUsage(os.Stdout)
+			return
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown argument: %s\n\n", argument)
+			printUsage(os.Stderr)
+			os.Exit(2)
+		}
 	}
 	os.Exit(run())
+}
+
+func printUsage(target io.Writer) {
+	// Help output going nowhere is not worth reacting to.
+	_, _ = fmt.Fprintf(target, `ColimaStatus %s
+
+A macOS menu bar app for a local Colima installation. It runs without a Dock
+icon; all interaction happens through the menu bar item.
+
+Usage:
+  ColimaStatus [--version] [--help]
+
+Options:
+  -h, --help     Show this help and exit.
+  -v, --version  Show the version and exit.
+
+Settings (edit the file; changes take effect on the next start):
+  %s
+
+Log:
+  %s
+
+Environment variables override the settings file. They are meant for running
+the binary from a terminal: an app launched from Finder or as a login item
+inherits no shell environment, which is why the settings file exists.
+  COLIMASTATUS_PROFILE       Colima profile to monitor
+  COLIMASTATUS_COLIMA_PATH   Colima executable in a non-standard location
+  COLIMASTATUS_LANGUAGE      Force "en" or "de" instead of following macOS
+`, buildinfo.Summary(), config.DescribePath(), logging.DescribePath())
 }
 
 // run owns the exit code so that the log is closed on every path. Exiting from
@@ -44,7 +87,7 @@ func run() int {
 	}
 
 	app := trayui.New(trayui.Options{
-		Controller: newController(configuration, texts),
+		Controller: newController(configuration),
 		Interval:   configuration.CheckInterval,
 		Autostart:  autostart.NewNativeController(),
 		Texts:      texts,
@@ -75,11 +118,11 @@ func loadConfiguration() (config.Config, string) {
 	return configuration, path
 }
 
-func newController(configuration config.Config, texts *localization.Strings) monitor.Controller {
+func newController(configuration config.Config) monitor.Controller {
 	colimaPath, err := colima.Locate(configuration.ColimaPath)
 	if err != nil {
 		log.Printf("Colima could not be located: %v", err)
-		return unavailableController{err: errors.New(texts.ColimaNotFound())}
+		return unavailableController{err: colima.Unavailable(err)}
 	}
 	log.Printf("using Colima at %s", colimaPath)
 	return colima.NewClient(colimaPath, configuration.Profile)

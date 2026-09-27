@@ -4,7 +4,6 @@ package colima
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -51,11 +50,11 @@ func (client *Client) Status(ctx context.Context) (Profile, error) {
 
 	output, err := client.runner.Run(statusContext, client.path, "list", "--json")
 	if err != nil {
-		return Profile{}, fmt.Errorf("Colima status could not be queried: %w", err)
+		return Profile{}, classify(statusContext, KindStatus, err)
 	}
 	profiles, err := ParseProfiles(strings.NewReader(output.Stdout))
 	if err != nil {
-		return Profile{}, err
+		return Profile{}, &Error{Kind: KindStatus, Cause: err}
 	}
 	for _, profile := range profiles {
 		if profile.Name == client.profile {
@@ -71,7 +70,7 @@ func (client *Client) Status(ctx context.Context) (Profile, error) {
 }
 
 func (client *Client) Start(ctx context.Context) error {
-	return client.run(ctx, "Colima could not be started", client.profileArgs("start")...)
+	return client.run(ctx, KindStart, client.profileArgs("start")...)
 }
 
 func (client *Client) Stop(ctx context.Context, force bool) error {
@@ -79,7 +78,7 @@ func (client *Client) Stop(ctx context.Context, force bool) error {
 	if force {
 		args = append(args, "--force")
 	}
-	return client.run(ctx, "Colima could not be stopped", args...)
+	return client.run(ctx, KindStop, args...)
 }
 
 // profileArgs selects the profile with the documented global -p flag rather
@@ -92,11 +91,9 @@ func (client *Client) profileArgs(action string) []string {
 	return []string{action, "-p", client.profile}
 }
 
-func (client *Client) run(ctx context.Context, message string, args ...string) error {
+func (client *Client) run(ctx context.Context, kind Kind, args ...string) error {
 	actionContext, cancel := context.WithTimeout(ctx, client.actionTimeout)
 	defer cancel()
-	if _, err := client.runner.Run(actionContext, client.path, args...); err != nil {
-		return fmt.Errorf("%s: %w", message, err)
-	}
-	return nil
+	_, err := client.runner.Run(actionContext, client.path, args...)
+	return classify(actionContext, kind, err)
 }

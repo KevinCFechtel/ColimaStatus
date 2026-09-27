@@ -47,4 +47,12 @@ var (
 	messageTrayShowConfigurationTooltip    = &i18n.Message{ID: "Tray.ShowConfigurationTooltip", Description: "Tooltip for the action that reveals the settings file.", Other: "Reveal config.json, which sets the profile and the check interval"}
 	messageTrayWatchActive                 = &i18n.Message{ID: "Tray.WatchActive", Description: "Tooltip line shown while Lima lifecycle events are being received.", Other: "Live updates are active"}
 	messageTrayWatchFallback               = &i18n.Message{ID: "Tray.WatchFallback", Description: "Tooltip line shown when only the periodic safety check is available.", Other: "Live updates are unavailable, checking periodically"}
+	messageErrorStatusFailed               = &i18n.Message{ID: "Error.StatusFailed", Description: "Menu row shown when the Colima status could not be read.", Other: "Colima status could not be read"}
+	messageErrorStartFailed                = &i18n.Message{ID: "Error.StartFailed", Description: "Menu row shown when starting Colima failed.", Other: "Colima could not be started"}
+	messageErrorStopFailed                 = &i18n.Message{ID: "Error.StopFailed", Description: "Menu row shown when stopping Colima failed.", Other: "Colima could not be stopped"}
+	messageErrorTimeout                    = &i18n.Message{ID: "Error.Timeout", Description: "Menu row shown when a Colima command exceeded its deadline.", Other: "Colima did not respond in time"}
+	messageErrorUnknown                    = &i18n.Message{ID: "Error.Unknown", Description: "Menu row shown for a failure that fits no other category.", Other: "Colima reported an error"}
+	messageErrorDetailHint                 = &i18n.Message{ID: "Error.DetailHint", Description: "Tooltip line pointing at the log for the technical cause of a failure.", Other: "Technical details are in the log"}
+	messageFormatTime                      = &i18n.Message{ID: "Format.Time", Description: "Go time layout for a clock time. Translate by rewriting the reference time 15:04:05 (3:04:05 PM) in the conventions of the language, not by translating the words.", Other: "3:04:05 PM"}
+	messageFormatTimestamp                 = &i18n.Message{ID: "Format.Timestamp", Description: "Go time layout for a full date and time. Translate by rewriting the reference time Jan 2, 2006 15:04:05 in the conventions of the language, not by translating the words.", Other: "Jan 2, 2006, 3:04:05 PM"}
 )

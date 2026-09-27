@@ -3,13 +3,21 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>de</string>
+    <string>en</string>
     <key>CFBundleExecutable</key>
     <string>ColimaStatus</string>
     <key>CFBundleIdentifier</key>
     <string>dev.kevincfechtel.ColimaStatus</string>
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
+    <!-- Without this key the app does not appear under
+         System Settings > General > Language & Region > Applications,
+         so a per-app language cannot be chosen. -->
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>de</string>
+    </array>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -22,6 +30,10 @@
     <key>CFBundleVersion</key>
     <!-- Replaced from BUILD_NUMBER by Build/build.sh. -->
     <string>0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.developer-tools</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026 Kevin Fechtel. BSD 3-Clause License.</string>
     <key>LSMinimumSystemVersion</key>
     <!-- Replaced from APP_DEPLOYMENT_TARGET by Build/build.sh. -->
     <string>0.0</string>

@@ -48,6 +48,7 @@ type Monitor struct {
 	onState    func(State)
 	actions    chan Action
 	events     chan struct{}
+	wake       chan struct{}
 	running    atomic.Bool
 	watching   atomic.Bool
 	latest     *colima.Profile
@@ -64,6 +65,7 @@ func New(controller Controller, interval time.Duration, onState func(State)) *Mo
 		onState:       onState,
 		actions:       make(chan Action, 1),
 		events:        make(chan struct{}, 1),
+		wake:          make(chan struct{}, 1),
 		eventDebounce: 500 * time.Millisecond,
 		retryMinimum:  time.Second,
 		retryMaximum:  5 * time.Minute,
@@ -146,6 +148,12 @@ func (monitor *Monitor) watch(ctx context.Context, source EventSource) {
 		case <-ctx.Done():
 			timer.Stop()
 			return
+		case <-monitor.wake:
+			// Waking is the most likely moment for the stream to become
+			// available again, so the accumulated backoff is discarded.
+			timer.Stop()
+			retryDelay = monitor.retryMinimum
+			continue
 		case <-timer.C:
 		}
 		retryDelay *= 2
@@ -153,6 +161,19 @@ func (monitor *Monitor) watch(ctx context.Context, source EventSource) {
 			retryDelay = monitor.retryMaximum
 		}
 	}
+}
+
+// NotifyWake reports that the machine came back from sleep. It refreshes the
+// status, because timers did not advance while the machine was asleep and the
+// displayed state is as old as the moment the lid was closed, and it releases
+// the watcher from its retry delay: an event stream that died during sleep
+// would otherwise stay down for up to the maximum backoff.
+func (monitor *Monitor) NotifyWake() {
+	select {
+	case monitor.wake <- struct{}{}:
+	default:
+	}
+	monitor.Trigger(ActionRefresh)
 }
 
 func (monitor *Monitor) notifyEvent() {

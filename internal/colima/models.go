@@ -21,6 +21,5 @@ type Profile struct {
 	Memory    int64
 	Disk      int64
 	Runtime   string
-	Address   string
 	CheckedAt time.Time
 }

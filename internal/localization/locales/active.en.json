@@ -3,6 +3,38 @@
     "description": "Error shown when no Colima executable can be found.",
     "other": "Colima was not found"
   },
+  "Error.DetailHint": {
+    "description": "Tooltip line pointing at the log for the technical cause of a failure.",
+    "other": "Technical details are in the log"
+  },
+  "Error.StartFailed": {
+    "description": "Menu row shown when starting Colima failed.",
+    "other": "Colima could not be started"
+  },
+  "Error.StatusFailed": {
+    "description": "Menu row shown when the Colima status could not be read.",
+    "other": "Colima status could not be read"
+  },
+  "Error.StopFailed": {
+    "description": "Menu row shown when stopping Colima failed.",
+    "other": "Colima could not be stopped"
+  },
+  "Error.Timeout": {
+    "description": "Menu row shown when a Colima command exceeded its deadline.",
+    "other": "Colima did not respond in time"
+  },
+  "Error.Unknown": {
+    "description": "Menu row shown for a failure that fits no other category.",
+    "other": "Colima reported an error"
+  },
+  "Format.Time": {
+    "description": "Go time layout for a clock time. Translate by rewriting the reference time 15:04:05 (3:04:05 PM) in the conventions of the language, not by translating the words.",
+    "other": "3:04:05 PM"
+  },
+  "Format.Timestamp": {
+    "description": "Go time layout for a full date and time. Translate by rewriting the reference time Jan 2, 2006 15:04:05 in the conventions of the language, not by translating the words.",
+    "other": "Jan 2, 2006, 3:04:05 PM"
+  },
   "Profile.Broken": {
     "description": "Status for a broken Colima profile.",
     "other": "Colima is broken ({{.Name}})"

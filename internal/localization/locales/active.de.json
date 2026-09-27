@@ -4,6 +4,46 @@
     "hash": "sha1-e80397b1986eba9a5ce6a63a6159fa2c4a0e7c24",
     "other": "Colima wurde nicht gefunden"
   },
+  "Error.DetailHint": {
+    "description": "Tooltip line pointing at the log for the technical cause of a failure.",
+    "hash": "sha1-bbaff027037ec25cfa720d0e2361fd0f29239644",
+    "other": "Technische Details stehen im Protokoll"
+  },
+  "Error.StartFailed": {
+    "description": "Menu row shown when starting Colima failed.",
+    "hash": "sha1-6b75a5dacb959415b9196259eb4335c41804ece4",
+    "other": "Colima konnte nicht gestartet werden"
+  },
+  "Error.StatusFailed": {
+    "description": "Menu row shown when the Colima status could not be read.",
+    "hash": "sha1-fee85168e4a5a0fdb378ef33a0f7443ea97efa2a",
+    "other": "Colima-Status konnte nicht gelesen werden"
+  },
+  "Error.StopFailed": {
+    "description": "Menu row shown when stopping Colima failed.",
+    "hash": "sha1-e8af435d6cbd20e136d5750cf88bb5643d324ccd",
+    "other": "Colima konnte nicht gestoppt werden"
+  },
+  "Error.Timeout": {
+    "description": "Menu row shown when a Colima command exceeded its deadline.",
+    "hash": "sha1-cfeefbbc9a86d21766cb56df23a5da1be38a554a",
+    "other": "Colima hat nicht rechtzeitig geantwortet"
+  },
+  "Error.Unknown": {
+    "description": "Menu row shown for a failure that fits no other category.",
+    "hash": "sha1-49aff102fcc77903094ad460e353d3f15fa1206e",
+    "other": "Colima hat einen Fehler gemeldet"
+  },
+  "Format.Time": {
+    "description": "Go time layout for a clock time. Translate by rewriting the reference time 15:04:05 (3:04:05 PM) in the conventions of the language, not by translating the words.",
+    "hash": "sha1-f10d3adb5dcf4d613e48d9ce536f6d85246c0521",
+    "other": "15:04:05"
+  },
+  "Format.Timestamp": {
+    "description": "Go time layout for a full date and time. Translate by rewriting the reference time Jan 2, 2006 15:04:05 in the conventions of the language, not by translating the words.",
+    "hash": "sha1-186be94ab93d457d39145eed8d96c78446e8d948",
+    "other": "02.01.2006, 15:04:05"
+  },
   "Profile.Broken": {
     "description": "Status for a broken Colima profile.",
     "hash": "sha1-9819f4dd3074ad81396bbe5b90b1c8167186e8cb",

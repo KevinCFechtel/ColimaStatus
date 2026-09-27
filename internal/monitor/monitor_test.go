@@ -282,3 +282,89 @@ func waitFor(t *testing.T, condition func() bool) {
 	}
 	t.Fatal("timed out waiting for the expected state")
 }
+
+// Waking must re-read the status: timers did not advance while the machine
+// slept, so the displayed state is as old as the moment the lid was closed.
+func TestNotifyWakeRefreshesTheStatus(t *testing.T) {
+	t.Parallel()
+
+	controller := &countingController{}
+	testMonitor := New(controller, time.Hour, func(State) {})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		testMonitor.Run(ctx)
+	}()
+
+	waitFor(t, func() bool { return controller.statusCalls() == 1 })
+	testMonitor.NotifyWake()
+	waitFor(t, func() bool { return controller.statusCalls() >= 2 })
+
+	cancel()
+	<-done
+}
+
+// The watcher must not sit out its accumulated backoff after a wake: the
+// stream most likely died with the machine and can be reopened right away.
+func TestNotifyWakeReleasesTheWatchBackoff(t *testing.T) {
+	t.Parallel()
+
+	source := &countingWatchSource{}
+	controller := &watchingController{countingController: &countingController{}, EventSource: source}
+	testMonitor := New(controller, time.Hour, func(State) {})
+	testMonitor.retryMinimum = time.Hour
+	testMonitor.retryMaximum = time.Hour
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		testMonitor.Run(ctx)
+	}()
+
+	// The first Watch returned immediately, so the loop is now waiting out the
+	// one-hour delay. Without the wake path the second call never happens.
+	waitFor(t, func() bool { return source.calls() == 1 })
+	testMonitor.NotifyWake()
+	waitFor(t, func() bool { return source.calls() >= 2 })
+
+	cancel()
+	<-done
+}
+
+type countingController struct {
+	calls atomic.Int64
+}
+
+func (controller *countingController) Status(context.Context) (colima.Profile, error) {
+	controller.calls.Add(1)
+	return colima.Profile{Name: "default", State: colima.StateStopped}, nil
+}
+
+func (controller *countingController) Start(context.Context) error { return nil }
+
+func (controller *countingController) Stop(context.Context, bool) error { return nil }
+
+func (controller *countingController) statusCalls() int64 { return controller.calls.Load() }
+
+type countingWatchSource struct {
+	watchCalls atomic.Int64
+}
+
+func (source *countingWatchSource) Watch(ctx context.Context, _ func()) error {
+	source.watchCalls.Add(1)
+	return errors.New("stream ended")
+}
+
+func (source *countingWatchSource) calls() int64 { return source.watchCalls.Load() }
+
+type watchingController struct {
+	*countingController
+	EventSource
+}

@@ -12,14 +12,12 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
-
-	"fyne.io/systray"
 
 	"github.com/KevinCFechtel/ColimaStatus/internal/autostart"
 	"github.com/KevinCFechtel/ColimaStatus/internal/colima"
 	"github.com/KevinCFechtel/ColimaStatus/internal/localization"
 	"github.com/KevinCFechtel/ColimaStatus/internal/monitor"
+	"github.com/KevinCFechtel/ColimaStatus/internal/power"
 )
 
 // autostartRefreshInterval only has to notice a change the user made in System
@@ -38,6 +36,8 @@ type Options struct {
 	Texts      *localization.Strings
 	LogPath    string
 	ConfigPath string
+	// Menu defaults to the real menu bar; tests supply their own.
+	Menu Menu
 }
 
 type App struct {
@@ -48,27 +48,34 @@ type App struct {
 	logPath    string
 	configPath string
 
-	ctx     context.Context
-	cancel  context.CancelFunc
-	monitor *monitor.Monitor
-	wait    sync.WaitGroup
+	ctx           context.Context
+	cancel        context.CancelFunc
+	monitor       *monitor.Monitor
+	wait          sync.WaitGroup
+	stopWakeWatch func()
+	menu          Menu
 
-	statusItem            *systray.MenuItem
-	detailsItem           *systray.MenuItem
-	checkedItem           *systray.MenuItem
-	startItem             *systray.MenuItem
-	stopItem              *systray.MenuItem
-	refreshItem           *systray.MenuItem
-	autostartItem         *systray.MenuItem
-	autostartSettingsItem *systray.MenuItem
-	showLogItem           *systray.MenuItem
-	showConfigItem        *systray.MenuItem
-	quitItem              *systray.MenuItem
+	statusItem            Item
+	detailsItem           Item
+	checkedItem           Item
+	startItem             Item
+	stopItem              Item
+	refreshItem           Item
+	autostartItem         Item
+	autostartSettingsItem Item
+	showLogItem           Item
+	showConfigItem        Item
+	quitItem              Item
 }
 
 func New(options Options) *App {
 	ctx, cancel := context.WithCancel(context.Background())
+	menu := options.Menu
+	if menu == nil {
+		menu = SystrayMenu{}
+	}
 	return &App{
+		menu:       menu,
 		controller: options.Controller,
 		interval:   options.Interval,
 		autostart:  options.Autostart,
@@ -81,58 +88,75 @@ func New(options Options) *App {
 }
 
 func (app *App) OnReady() {
-	app.setIcon(false)
-	systray.SetTitle("")
-	systray.SetTooltip(app.texts.TrayTooltip())
-	systray.SetRemovalAllowed(false)
-
-	app.statusItem = systray.AddMenuItem(app.texts.Checking(), app.texts.CurrentStatusTooltip())
-	app.statusItem.Disable()
-	app.detailsItem = systray.AddMenuItem("", app.texts.ProfileDetailsTooltip())
-	app.detailsItem.Disable()
-	app.detailsItem.Hide()
-	app.checkedItem = systray.AddMenuItem("", app.texts.LastCheckTooltip())
-	app.checkedItem.Disable()
-	app.checkedItem.Hide()
-	systray.AddSeparator()
-	app.startItem = systray.AddMenuItem(app.texts.Start(), app.texts.StartTooltip())
-	app.stopItem = systray.AddMenuItem(app.texts.Stop(), app.texts.StopTooltip())
-	app.startItem.Disable()
-	app.stopItem.Disable()
-	app.refreshItem = systray.AddMenuItem(app.texts.Refresh(), app.texts.RefreshTooltip())
-	app.autostartItem = systray.AddMenuItemCheckbox(app.texts.AutostartTitle(), app.texts.AutostartEnableTooltip(), false)
-	app.autostartSettingsItem = systray.AddMenuItem(
-		app.texts.OpenLoginItems(),
-		app.texts.OpenLoginItemsTooltip(),
-	)
-	app.autostartSettingsItem.Hide()
-	systray.AddSeparator()
-	app.showConfigItem = systray.AddMenuItem(
-		app.texts.ShowConfiguration(),
-		app.texts.ShowConfigurationTooltip(),
-	)
-	app.showLogItem = systray.AddMenuItem(app.texts.ShowLog(), app.texts.ShowLogTooltip())
-	systray.AddSeparator()
-	app.quitItem = systray.AddMenuItem(app.texts.Quit(), app.texts.QuitTooltip())
-
+	app.buildMenu()
 	app.monitor = monitor.New(app.controller, app.interval, app.render)
+	app.stopWakeWatch = power.Watch(app.monitor.NotifyWake)
 	app.refreshAutostart()
 	app.startBackgroundTasks()
 }
 
+// buildMenu creates the rows and nothing else, so that the render logic can be
+// exercised without starting background tasks.
+func (app *App) buildMenu() {
+	app.setIcon(false)
+	app.menu.SetTitle("")
+	app.menu.SetTooltip(app.texts.TrayTooltip())
+	app.menu.SetRemovalAllowed(false)
+
+	app.statusItem = app.menu.AddItem(app.texts.Checking(), app.texts.CurrentStatusTooltip())
+	app.statusItem.Disable()
+	app.detailsItem = app.menu.AddItem("", app.texts.ProfileDetailsTooltip())
+	app.detailsItem.Disable()
+	app.detailsItem.Hide()
+	app.checkedItem = app.menu.AddItem("", app.texts.LastCheckTooltip())
+	app.checkedItem.Disable()
+	app.checkedItem.Hide()
+	app.menu.AddSeparator()
+	app.startItem = app.menu.AddItem(app.texts.Start(), app.texts.StartTooltip())
+	app.stopItem = app.menu.AddItem(app.texts.Stop(), app.texts.StopTooltip())
+	app.startItem.Disable()
+	app.stopItem.Disable()
+	app.refreshItem = app.menu.AddItem(app.texts.Refresh(), app.texts.RefreshTooltip())
+	app.autostartItem = app.menu.AddCheckbox(app.texts.AutostartTitle(), app.texts.AutostartEnableTooltip(), false)
+	app.autostartSettingsItem = app.menu.AddItem(
+		app.texts.OpenLoginItems(),
+		app.texts.OpenLoginItemsTooltip(),
+	)
+	app.autostartSettingsItem.Hide()
+	app.menu.AddSeparator()
+	app.showConfigItem = app.menu.AddItem(
+		app.texts.ShowConfiguration(),
+		app.texts.ShowConfigurationTooltip(),
+	)
+	app.showLogItem = app.menu.AddItem(app.texts.ShowLog(), app.texts.ShowLogTooltip())
+	app.menu.AddSeparator()
+	app.quitItem = app.menu.AddItem(app.texts.Quit(), app.texts.QuitTooltip())
+}
+
 func (app *App) OnExit() {
+	if app.stopWakeWatch != nil {
+		app.stopWakeWatch()
+	}
 	app.cancel()
 	app.wait.Wait()
 }
 
-func (app *App) startBackgroundTasks() {
-	app.wait.Add(2)
+// goRun registers a background task with the wait group at the point where it
+// is started. A hard-coded count has to be kept in sync by hand, and getting it
+// wrong hangs the app on quit or panics.
+func (app *App) goRun(task func()) {
+	app.wait.Add(1)
 	go func() {
 		defer app.wait.Done()
-		app.monitor.Run(app.ctx)
+		task()
 	}()
-	go func() {
-		defer app.wait.Done()
+}
+
+func (app *App) startBackgroundTasks() {
+	app.goRun(func() {
+		app.monitor.Run(app.ctx)
+	})
+	app.goRun(func() {
 		ticker := time.NewTicker(autostartRefreshInterval)
 		defer ticker.Stop()
 		// Every click channel is checked for closure. systray closes them all
@@ -142,53 +166,53 @@ func (app *App) startBackgroundTasks() {
 			select {
 			case <-app.ctx.Done():
 				return
-			case _, open := <-app.startItem.ClickedCh:
+			case _, open := <-app.startItem.Clicked():
 				if !open {
 					return
 				}
 				app.monitor.Trigger(monitor.ActionStart)
-			case _, open := <-app.stopItem.ClickedCh:
+			case _, open := <-app.stopItem.Clicked():
 				if !open {
 					return
 				}
 				app.monitor.Trigger(monitor.ActionStop)
-			case _, open := <-app.refreshItem.ClickedCh:
+			case _, open := <-app.refreshItem.Clicked():
 				if !open {
 					return
 				}
 				app.monitor.Trigger(monitor.ActionRefresh)
-			case _, open := <-app.autostartItem.ClickedCh:
+			case _, open := <-app.autostartItem.Clicked():
 				if !open {
 					return
 				}
 				app.toggleAutostart()
-			case _, open := <-app.autostartSettingsItem.ClickedCh:
+			case _, open := <-app.autostartSettingsItem.Clicked():
 				if !open {
 					return
 				}
 				app.openAutostartSettings()
-			case _, open := <-app.showConfigItem.ClickedCh:
+			case _, open := <-app.showConfigItem.Clicked():
 				if !open {
 					return
 				}
 				app.reveal(app.configPath)
-			case _, open := <-app.showLogItem.ClickedCh:
+			case _, open := <-app.showLogItem.Clicked():
 				if !open {
 					return
 				}
 				app.reveal(app.logPath)
 			case <-ticker.C:
 				app.refreshAutostart()
-			case _, open := <-app.quitItem.ClickedCh:
+			case _, open := <-app.quitItem.Clicked():
 				if !open {
 					return
 				}
 				app.cancel()
-				systray.Quit()
+				app.menu.Quit()
 				return
 			}
 		}
-	}()
+	})
 }
 
 func (app *App) render(state monitor.State) {
@@ -200,7 +224,7 @@ func (app *App) render(state monitor.State) {
 
 	if state.Profile == nil {
 		app.setIcon(false)
-		systray.SetTooltip(app.texts.UnavailableTooltip())
+		app.menu.SetTooltip(app.texts.UnavailableTooltip())
 		app.statusItem.SetTitle(app.texts.Unavailable())
 		app.renderError(state.Err)
 		app.startItem.Disable()
@@ -223,7 +247,7 @@ func (app *App) renderBusy(action monitor.Action) {
 		title = app.texts.Stopping()
 	}
 	app.setIcon(false)
-	systray.SetTooltip(app.texts.BusyTooltip())
+	app.menu.SetTooltip(app.texts.BusyTooltip())
 	app.statusItem.SetTitle(title)
 	app.detailsItem.Hide()
 	app.checkedItem.Hide()
@@ -235,7 +259,7 @@ func (app *App) renderBusy(action monitor.Action) {
 func (app *App) renderProfile(profile colima.Profile, watching bool) {
 	status := profilePresentation(app.texts, profile)
 	app.setIcon(profile.State == colima.StateRunning)
-	systray.SetTooltip("ColimaStatus – " + status)
+	app.menu.SetTooltip("ColimaStatus – " + status)
 	app.statusItem.SetTitle(status)
 
 	if details := profileDetails(profile); details != "" {
@@ -266,18 +290,21 @@ func (app *App) renderProfile(profile colima.Profile, watching bool) {
 	}
 }
 
+// renderError shows the failure in the user's language and keeps the technical
+// cause out of the menu. The cause is English, often long, and only useful when
+// debugging, so it goes to the log, which the menu can reveal.
 func (app *App) renderError(err error) {
 	if err == nil {
 		return
 	}
-	app.checkedItem.SetTitle(shortError(err))
-	app.checkedItem.SetTooltip(err.Error())
+	log.Printf("Colima reported a failure: %v", err)
+	app.checkedItem.SetTitle(failureMessage(app.texts, colima.KindOf(err)))
+	app.checkedItem.SetTooltip(app.texts.DetailHint())
 	app.checkedItem.Show()
 }
 
 func (app *App) setIcon(active bool) {
-	icon := iconPNG(active)
-	systray.SetTemplateIcon(icon, icon)
+	app.menu.SetTemplateIcon(iconPNG(active))
 }
 
 type autostartMenuState struct {
@@ -415,6 +442,26 @@ func autostartToggle(status autostart.Status) (enabled bool, canToggle bool) {
 	}
 }
 
+// failureMessage maps a domain failure onto a menu row. Keeping the mapping
+// here rather than in the localization package leaves that package free of any
+// knowledge about Colima.
+func failureMessage(texts *localization.Strings, kind colima.Kind) string {
+	switch kind {
+	case colima.KindUnavailable:
+		return texts.ColimaNotFound()
+	case colima.KindStatus:
+		return texts.StatusFailed()
+	case colima.KindStart:
+		return texts.StartFailed()
+	case colima.KindStop:
+		return texts.StopFailed()
+	case colima.KindTimeout:
+		return texts.Timeout()
+	default:
+		return texts.UnknownFailure()
+	}
+}
+
 func profilePresentation(texts *localization.Strings, profile colima.Profile) string {
 	name := profile.Name
 	if name == "" {
@@ -438,7 +485,7 @@ func profilePresentation(texts *localization.Strings, profile colima.Profile) st
 }
 
 func profileDetails(profile colima.Profile) string {
-	parts := make([]string, 0, 4)
+	parts := make([]string, 0, 5)
 	if profile.Runtime != "" {
 		parts = append(parts, profile.Runtime)
 	}
@@ -451,6 +498,9 @@ func profileDetails(profile colima.Profile) string {
 	if profile.Memory > 0 {
 		parts = append(parts, formatBytes(profile.Memory)+" RAM")
 	}
+	if profile.Disk > 0 {
+		parts = append(parts, formatBytes(profile.Disk)+" disk")
+	}
 	return strings.Join(parts, " · ")
 }
 
@@ -460,22 +510,6 @@ func formatBytes(bytes int64) string {
 		return fmt.Sprintf("%d GiB", bytes/gibibyte)
 	}
 	return fmt.Sprintf("%.1f GiB", float64(bytes)/float64(gibibyte))
-}
-
-// shortError cuts an error down to one menu row. The cut lands on a rune
-// boundary: error text carries localized messages and user paths, so cutting by
-// byte would split a multi-byte character into replacement characters.
-func shortError(err error) string {
-	const maximumLength = 90
-	message := err.Error()
-	if len(message) <= maximumLength {
-		return message
-	}
-	cut := maximumLength
-	for cut > 0 && !utf8.RuneStart(message[cut]) {
-		cut--
-	}
-	return message[:cut] + "\u2026"
 }
 
 // checkedTooltip explains where the next update will come from, so that a slow

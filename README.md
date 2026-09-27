@@ -31,6 +31,8 @@ application without a Dock icon or a separate window.
 - Supports custom Colima profiles and executable locations through a settings
   file, because environment variables do not reach a menu bar app.
 - Writes a log the menu can reveal, so a failed start is diagnosable.
+- Re-reads the status when the Mac wakes, because timers do not advance during
+  sleep and the menu would otherwise show what was true before the lid closed.
 - Follows the macOS language in English and German.
 
 All status checks and actions run locally. ColimaStatus does not require a
@@ -119,6 +121,15 @@ a fallback happened:
 The menu offers **Show log in Finder** to reveal it. It is rotated at 1 MiB and
 one previous generation is kept. The tooltip on the last-check row says whether
 live Lima events are arriving or whether only the periodic check is available.
+
+Failures are named in the selected language in the menu; the technical cause
+goes to the log rather than into a menu row, where it would be English and too
+long to read.
+
+```sh
+ColimaStatus --help      # flags, file locations, environment variables
+ColimaStatus --version
+```
 
 ## Development
 

@@ -2,6 +2,10 @@
 #import <ServiceManagement/ServiceManagement.h>
 #include <string.h>
 
+// SMAppService requires macOS 13, which the deployment target guarantees, so
+// none of this is guarded by @available. See APP_DEPLOYMENT_TARGET in
+// Build/version.sh; Build/build.sh fails if the linked binary disagrees.
+
 enum ColimaStatusAutostartStatus {
     ColimaStatusAutostartStatusError = -1,
     ColimaStatusAutostartStatusUnsupported = 0,
@@ -12,7 +16,6 @@ enum ColimaStatusAutostartStatus {
 };
 
 static int ColimaStatusMapAutostartStatus(SMAppServiceStatus status)
-API_AVAILABLE(macos(13.0))
 {
     switch (status) {
         case SMAppServiceStatusNotRegistered:
@@ -32,19 +35,18 @@ static void ColimaStatusSetErrorMessage(char **errorMessage, NSError *error)
     if (errorMessage == NULL) {
         return;
     }
+    // The message is shown as a tooltip and also logged. localizedDescription
+    // follows the system language, which is what the rest of the menu does too.
     NSString *message = error.localizedDescription;
     if (message == nil || message.length == 0) {
-        message = @"Autostart konnte nicht geändert werden";
+        message = @"Launch at login could not be changed";
     }
     *errorMessage = strdup(message.UTF8String);
 }
 
 int ColimaStatusAutostartStatus(void)
 {
-    if (@available(macOS 13.0, *)) {
-        return ColimaStatusMapAutostartStatus(SMAppService.mainAppService.status);
-    }
-    return ColimaStatusAutostartStatusUnsupported;
+    return ColimaStatusMapAutostartStatus(SMAppService.mainAppService.status);
 }
 
 int ColimaStatusSetAutostartEnabled(int enabled, char **errorMessage)
@@ -52,40 +54,37 @@ int ColimaStatusSetAutostartEnabled(int enabled, char **errorMessage)
     if (errorMessage != NULL) {
         *errorMessage = NULL;
     }
-    if (@available(macOS 13.0, *)) {
-        SMAppService *service = SMAppService.mainAppService;
-        int currentStatus = ColimaStatusMapAutostartStatus(service.status);
 
-        if ((enabled && currentStatus == ColimaStatusAutostartStatusEnabled) ||
-            (!enabled && currentStatus == ColimaStatusAutostartStatusDisabled)) {
-            return currentStatus;
-        }
-        if (enabled && currentStatus == ColimaStatusAutostartStatusRequiresApproval) {
-            return currentStatus;
-        }
+    SMAppService *service = SMAppService.mainAppService;
+    int currentStatus = ColimaStatusMapAutostartStatus(service.status);
 
-        NSError *error = nil;
-        BOOL succeeded = enabled
-            ? [service registerAndReturnError:&error]
-            : [service unregisterAndReturnError:&error];
-        int resultingStatus = ColimaStatusMapAutostartStatus(service.status);
-        if (succeeded || resultingStatus == ColimaStatusAutostartStatusRequiresApproval) {
-            return resultingStatus;
-        }
-
-        ColimaStatusSetErrorMessage(errorMessage, error);
-        return ColimaStatusAutostartStatusError;
+    if ((enabled && currentStatus == ColimaStatusAutostartStatusEnabled) ||
+        (!enabled && currentStatus == ColimaStatusAutostartStatusDisabled)) {
+        return currentStatus;
     }
-    return ColimaStatusAutostartStatusUnsupported;
+    // Approval is the user's to give in System Settings; registering again
+    // would not move it forward.
+    if (enabled && currentStatus == ColimaStatusAutostartStatusRequiresApproval) {
+        return currentStatus;
+    }
+
+    NSError *error = nil;
+    BOOL succeeded = enabled
+        ? [service registerAndReturnError:&error]
+        : [service unregisterAndReturnError:&error];
+    int resultingStatus = ColimaStatusMapAutostartStatus(service.status);
+    if (succeeded || resultingStatus == ColimaStatusAutostartStatusRequiresApproval) {
+        return resultingStatus;
+    }
+
+    ColimaStatusSetErrorMessage(errorMessage, error);
+    return ColimaStatusAutostartStatusError;
 }
 
 int ColimaStatusOpenAutostartSettings(void)
 {
-    if (@available(macOS 13.0, *)) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [SMAppService openSystemSettingsLoginItems];
-        });
-        return 1;
-    }
-    return 0;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [SMAppService openSystemSettingsLoginItems];
+    });
+    return 1;
 }

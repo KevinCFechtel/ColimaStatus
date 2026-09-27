@@ -17,7 +17,6 @@ type profileJSON struct {
 	Memory  flexibleNumber `json:"memory"`
 	Disk    flexibleNumber `json:"disk"`
 	Runtime string         `json:"runtime"`
-	Address string         `json:"address"`
 }
 
 // flexibleNumber decodes a JSON number that a future Colima may report as a
@@ -82,7 +81,6 @@ func ParseProfiles(reader io.Reader) ([]Profile, error) {
 			Memory:    int64(raw.Memory),
 			Disk:      int64(raw.Disk),
 			Runtime:   raw.Runtime,
-			Address:   raw.Address,
 		})
 	}
 
