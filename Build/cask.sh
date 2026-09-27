@@ -120,6 +120,10 @@ fi
 # the system's background task database rather than in a file a cask could
 # remove; `brew uninstall` unregisters nothing, so a reinstall may still launch
 # at login.
+# The tilde stays literal on purpose: Homebrew expands it on the user's machine.
+# Substituting $HOME here would bake the maintainer's home directory into the
+# published cask, so SC2088 does not apply.
+# shellcheck disable=SC2088
 ZAP_PATHS=(
   "~/Library/Application Support/ColimaStatus"
   "~/Library/Logs/ColimaStatus"

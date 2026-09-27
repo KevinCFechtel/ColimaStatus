@@ -84,6 +84,17 @@ jobs:
           # a red build on unrelated pull requests. Bump this deliberately.
           version: v2.14.0
 
+  # Shell is the release path now: Build/local-release.sh signs, publishes and
+  # pushes a cask. This runs on Linux because the macOS runner image does not
+  # ship shellcheck, and linting shell does not need macOS.
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Shellcheck the build scripts
+        run: shellcheck -S warning Build/*.sh
+
   vulncheck:
     runs-on: macos-15
     timeout-minutes: 15

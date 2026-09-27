@@ -1,10 +1,19 @@
 name: Release artifacts
 
 # Signing and notarization stay local: Build/release.sh needs the private
-# Developer ID identity and a notarytool keychain profile. This workflow only
-# proves that a tagged commit builds and passes verification, and publishes an
-# ad-hoc signed bundle for inspection. The signed, notarized and stapled
-# archive is still produced by Build/release.sh and attached by hand.
+# Developer ID identity and a notarytool keychain profile, which deliberately
+# never reach GitHub.
+#
+# This workflow builds the bundle that the local signing step then consumes, so
+# the shipped binary comes from the tagged commit built on a clean machine
+# rather than from a maintainer's working tree. The archive is attested with
+# GitHub build provenance, which binds these exact bytes to this repository,
+# this workflow and this commit.
+#
+# The attestation covers the UNSIGNED archive. Signing, notarizing and stapling
+# rewrite the bundle afterwards, so the published release asset has a different
+# digest and is not itself attested; Build/local-release.sh records the link
+# between the two in the release notes.
 on:
   push:
     tags: ["v*"]
@@ -17,6 +26,11 @@ jobs:
   verify-tag:
     runs-on: macos-15
     timeout-minutes: 20
+    permissions:
+      contents: read
+      # Required to mint the Sigstore certificate for the attestation.
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -54,23 +68,44 @@ jobs:
           echo "Architectures: ${archs}"
           for required in arm64 x86_64; do
             if [[ "${archs}" != *"${required}"* ]]; then
-              echo "Missing ${required} slice in the build." >&2
+              echo "Missing ${required} slice in release build." >&2
               exit 1
             fi
           done
 
-      - name: Archive the bundle
-        # upload-artifact re-zips its input without preserving the executable
-        # bit or symlinks, which would leave an unusable .app. Archiving with
-        # ditto first keeps the bundle intact inside the artifact.
+      # upload-artifact does not preserve file permissions, which would strip the
+      # executable bit from Contents/MacOS/ColimaStatus. codesign would sign that
+      # happily and the app would fail to launch. ditto keeps the bundle intact,
+      # and the outer zip that upload-artifact adds does not matter.
+      - name: Archive the app bundle
+        id: archive
         run: |
           mkdir -p dist/ci
-          COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc --noextattr \
+          archive="dist/ci/ColimaStatus-${GITHUB_REF_NAME#v}-unsigned.zip"
+          COPYFILE_DISABLE=1 ditto \
+            -c -k \
+            --keepParent \
+            --norsrc \
+            --noextattr \
             dist/ColimaStatus.app \
-            "dist/ci/ColimaStatus-${GITHUB_REF_NAME}-unsigned.zip"
+            "${archive}"
+
+          digest="$(shasum -a 256 "${archive}" | awk '{print $1}')"
+          echo "path=${archive}" >>"${GITHUB_OUTPUT}"
+          echo "digest=${digest}" >>"${GITHUB_OUTPUT}"
+          {
+            echo "### Unsigned build"
+            echo
+            echo "SHA-256: \`${digest}\`"
+          } >>"${GITHUB_STEP_SUMMARY}"
+
+      - name: Attest the unsigned build
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ${{ steps.archive.outputs.path }}
 
       - uses: actions/upload-artifact@v7
         with:
           name: ColimaStatus-${{ github.ref_name }}-unsigned
-          path: dist/ci/ColimaStatus-${{ github.ref_name }}-unsigned.zip
+          path: ${{ steps.archive.outputs.path }}
           retention-days: 14

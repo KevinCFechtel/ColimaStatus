@@ -25,6 +25,12 @@ NOTARY_TIMEOUT="${NOTARY_TIMEOUT:-30m}"
 # Releases are always universal so that Apple Silicon and Intel Macs share one
 # download. Build/build.sh produces both slices and lipo merges them. The
 # Homebrew tap rejects per-architecture releases.
+# COLIMASTATUS_PREBUILT_APP adopts an already built bundle instead of building
+# one. Build/local-release.sh points it at the attested archive from the tag's
+# workflow run, which keeps the maintainer's working tree out of the shipped
+# binary. Empty means build locally, which stays the default.
+PREBUILT_APP="${COLIMASTATUS_PREBUILT_APP:-}"
+
 RELEASE_ARCHS="arm64 amd64"
 RELEASE_ARCH_LABEL="universal"
 REQUIRED_SLICES=(arm64 x86_64)
@@ -126,8 +132,29 @@ verify_bundle_slices() {
   done
 }
 
-echo "1/8 Building the ColimaStatus app"
-COLIMASTATUS_ARCHS="${RELEASE_ARCHS}" "${SCRIPT_DIR}/build.sh"
+if [[ -n "${PREBUILT_APP}" ]]; then
+  echo "1/8 Adopting the prebuilt app bundle"
+  if [[ ! -d "${PREBUILT_APP}" ]]; then
+    echo "COLIMASTATUS_PREBUILT_APP is not a bundle directory: ${PREBUILT_APP}" >&2
+    exit 1
+  fi
+
+  # The remaining steps all operate on APP_DIR, so a bundle from elsewhere is
+  # copied in. ditto is used rather than cp because it keeps permissions and
+  # the bundle structure intact.
+  PREBUILT_APP="$(cd -- "${PREBUILT_APP}" && pwd)"
+  if [[ "${PREBUILT_APP}" != "${APP_DIR}" ]]; then
+    rm -rf -- "${APP_DIR}"
+    mkdir -p -- "$(dirname -- "${APP_DIR}")"
+    ditto "${PREBUILT_APP}" "${APP_DIR}"
+  fi
+else
+  echo "1/8 Building the ColimaStatus app"
+  COLIMASTATUS_ARCHS="${RELEASE_ARCHS}" "${SCRIPT_DIR}/build.sh"
+fi
+
+# Both paths are verified the same way: a prebuilt bundle is not trusted more
+# than a local build.
 verify_bundle_version "${APP_DIR}"
 verify_bundle_slices "${APP_DIR}"
 
