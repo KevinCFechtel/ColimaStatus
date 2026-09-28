@@ -33,7 +33,7 @@ type limaWatchEvent struct {
 // Watch streams Lima lifecycle events and calls notify when the configured
 // Colima instance may have changed state. Port-forwarding and SSH events are
 // deliberately ignored.
-func (client *Client) Watch(ctx context.Context, notify func()) error {
+func (client *Client) Watch(ctx context.Context, onReady, notify func()) error {
 	if client.limaPath == "" || client.limaHome == "" {
 		return ErrWatchUnsupported
 	}
@@ -51,6 +51,9 @@ func (client *Client) Watch(ctx context.Context, notify func()) error {
 			return ErrWatchUnsupported
 		}
 		return fmt.Errorf("Lima event stream could not be started: %w", err)
+	}
+	if onReady != nil {
+		onReady()
 	}
 
 	scanner := bufio.NewScanner(stdout)
@@ -159,7 +162,9 @@ func resolveLimaHome() string {
 		return absolutePath(path)
 	}
 	if path := os.Getenv("COLIMA_HOME"); path != "" {
-		return filepath.Join(absolutePath(path), "_lima")
+		if _, err := os.Stat(path); err == nil {
+			return filepath.Join(absolutePath(path), "_lima")
+		}
 	}
 
 	home, err := os.UserHomeDir()
