@@ -164,11 +164,11 @@ func TestRenderReportsWhereUpdatesComeFrom(t *testing.T) {
 	app, _ := newRenderTestApp(t)
 	profile := colima.Profile{Name: "default", State: colima.StateRunning}
 
-	app.render(monitor.State{Profile: &profile, Watching: true})
+	app.render(monitor.State{Profile: &profile, Watch: monitor.WatchActive})
 	_, _, _, _ = app.checkedItem.(*fakeItem).state()
 	withEvents := app.checkedItem.(*fakeItem).tooltipText()
 
-	app.render(monitor.State{Profile: &profile, Watching: false})
+	app.render(monitor.State{Profile: &profile, Watch: monitor.WatchUnavailable})
 	withoutEvents := app.checkedItem.(*fakeItem).tooltipText()
 
 	if withEvents == withoutEvents {

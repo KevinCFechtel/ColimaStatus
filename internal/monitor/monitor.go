@@ -19,8 +19,12 @@ type Controller interface {
 	Stop(ctx context.Context, force bool) error
 }
 
+// EventSource reports when its event stream is ready and when a lifecycle
+// event arrives. Keeping readiness separate from events lets the presentation
+// distinguish a live stream from the periodic safety check without guessing
+// from whether Watch happens to be blocked.
 type EventSource interface {
-	Watch(ctx context.Context, notify func()) error
+	Watch(ctx context.Context, onReady, notify func()) error
 }
 
 type Action string
@@ -31,15 +35,24 @@ const (
 	ActionStop    Action = "stop"
 )
 
+// WatchStatus describes the lifecycle of the optional live event source.
+// The monitor owns this state in its main loop; the watch goroutine only sends
+// transitions, so UI state is never assembled from atomics on different
+// goroutines.
+type WatchStatus string
+
+const (
+	WatchUnavailable WatchStatus = "unavailable"
+	WatchStarting    WatchStatus = "starting"
+	WatchActive      WatchStatus = "active"
+	WatchRetrying    WatchStatus = "retrying"
+)
+
 type State struct {
 	Profile *colima.Profile
 	Busy    Action
 	Err     error
-	// Watching reports whether Lima lifecycle events are currently being
-	// received. When it is false the safety interval is the only source of
-	// updates, which the menu says out loud rather than leaving the user to
-	// wonder why a change took minutes to appear.
-	Watching bool
+	Watch   WatchStatus
 }
 
 type Monitor struct {
@@ -49,9 +62,13 @@ type Monitor struct {
 	actions    chan Action
 	events     chan struct{}
 	wake       chan struct{}
+	watchState chan WatchStatus
 	running    atomic.Bool
-	watching   atomic.Bool
-	latest     *colima.Profile
+
+	latest      *colima.Profile
+	lastErr     error
+	busy        Action
+	watchStatus WatchStatus
 
 	eventDebounce time.Duration
 	retryMinimum  time.Duration
@@ -66,6 +83,7 @@ func New(controller Controller, interval time.Duration, onState func(State)) *Mo
 		actions:       make(chan Action, 1),
 		events:        make(chan struct{}, 1),
 		wake:          make(chan struct{}, 1),
+		watchState:    make(chan WatchStatus),
 		eventDebounce: 500 * time.Millisecond,
 		retryMinimum:  time.Second,
 		retryMaximum:  5 * time.Minute,
@@ -73,12 +91,19 @@ func New(controller Controller, interval time.Duration, onState func(State)) *Mo
 }
 
 func (monitor *Monitor) Run(ctx context.Context) {
+	source, hasEventSource := monitor.controller.(EventSource)
+	if hasEventSource {
+		monitor.watchStatus = WatchStarting
+	} else {
+		monitor.watchStatus = WatchUnavailable
+	}
+
 	monitor.perform(ctx, ActionRefresh)
 	ticker := time.NewTicker(monitor.interval)
 	defer ticker.Stop()
 
 	watchDone := make(chan struct{})
-	if source, ok := monitor.controller.(EventSource); ok {
+	if hasEventSource {
 		go func() {
 			defer close(watchDone)
 			monitor.watch(ctx, source)
@@ -104,6 +129,11 @@ func (monitor *Monitor) Run(ctx context.Context) {
 			monitor.perform(ctx, ActionRefresh)
 		case action := <-monitor.actions:
 			monitor.perform(ctx, action)
+		case status := <-monitor.watchState:
+			if status != monitor.watchStatus {
+				monitor.watchStatus = status
+				monitor.publish()
+			}
 		case <-monitor.events:
 			if eventTimer == nil {
 				eventTimer = time.NewTimer(monitor.eventDebounce)
@@ -127,15 +157,26 @@ func (monitor *Monitor) Run(ctx context.Context) {
 func (monitor *Monitor) watch(ctx context.Context, source EventSource) {
 	retryDelay := monitor.retryMinimum
 	for {
+		if !monitor.reportWatchStatus(ctx, WatchStarting) {
+			return
+		}
+
 		startedAt := time.Now()
-		monitor.watching.Store(true)
-		err := source.Watch(ctx, monitor.notifyEvent)
-		monitor.watching.Store(false)
+		err := source.Watch(
+			ctx,
+			func() { _ = monitor.reportWatchStatus(ctx, WatchActive) },
+			monitor.notifyEvent,
+		)
 		if ctx.Err() != nil {
 			return
 		}
 		if errors.Is(err, colima.ErrWatchUnsupported) {
+			_ = monitor.reportWatchStatus(ctx, WatchUnavailable)
 			log.Printf("Lima event watching is unavailable, falling back to periodic checks: %v", err)
+			return
+		}
+
+		if !monitor.reportWatchStatus(ctx, WatchRetrying) {
 			return
 		}
 		log.Printf("Lima event stream ended, retrying: %v", err)
@@ -160,6 +201,15 @@ func (monitor *Monitor) watch(ctx context.Context, source EventSource) {
 		if retryDelay > monitor.retryMaximum {
 			retryDelay = monitor.retryMaximum
 		}
+	}
+}
+
+func (monitor *Monitor) reportWatchStatus(ctx context.Context, status WatchStatus) bool {
+	select {
+	case monitor.watchState <- status:
+		return true
+	case <-ctx.Done():
+		return false
 	}
 }
 
@@ -200,7 +250,10 @@ func (monitor *Monitor) perform(ctx context.Context, action Action) {
 	}
 	defer monitor.running.Store(false)
 
-	monitor.onState(State{Profile: monitor.latest, Busy: action, Watching: monitor.watching.Load()})
+	monitor.busy = action
+	monitor.lastErr = nil
+	monitor.publish()
+
 	var actionErr error
 	switch action {
 	case ActionStart:
@@ -214,9 +267,19 @@ func (monitor *Monitor) perform(ctx context.Context, action Action) {
 	if statusErr == nil {
 		monitor.latest = &profile
 	}
-	err := actionErr
-	if err == nil {
-		err = statusErr
+	monitor.lastErr = actionErr
+	if monitor.lastErr == nil {
+		monitor.lastErr = statusErr
 	}
-	monitor.onState(State{Profile: monitor.latest, Err: err, Watching: monitor.watching.Load()})
+	monitor.busy = ""
+	monitor.publish()
+}
+
+func (monitor *Monitor) publish() {
+	monitor.onState(State{
+		Profile: monitor.latest,
+		Busy:    monitor.busy,
+		Err:     monitor.lastErr,
+		Watch:   monitor.watchStatus,
+	})
 }

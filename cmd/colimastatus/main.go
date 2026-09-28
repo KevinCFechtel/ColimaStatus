@@ -125,7 +125,15 @@ func newController(configuration config.Config) monitor.Controller {
 		return unavailableController{err: colima.Unavailable(err)}
 	}
 	log.Printf("using Colima at %s", colimaPath)
-	return colima.NewClient(colimaPath, configuration.Profile)
+	client := colima.NewClient(colimaPath, configuration.Profile)
+	versions := client.Versions(context.Background())
+	if versions.Colima != "" {
+		log.Printf("detected %s", versions.Colima)
+	}
+	if versions.Lima != "" {
+		log.Printf("detected %s", versions.Lima)
+	}
+	return client
 }
 
 type unavailableController struct {

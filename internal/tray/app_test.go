@@ -14,6 +14,7 @@ import (
 	"github.com/KevinCFechtel/ColimaStatus/internal/autostart"
 	"github.com/KevinCFechtel/ColimaStatus/internal/colima"
 	"github.com/KevinCFechtel/ColimaStatus/internal/localization"
+	"github.com/KevinCFechtel/ColimaStatus/internal/monitor"
 )
 
 func TestIconIsPNG(t *testing.T) {
@@ -195,8 +196,8 @@ func TestCheckedTooltipStatesWhereUpdatesComeFrom(t *testing.T) {
 	app := &App{texts: localization.MustNew("en")}
 	checkedAt := time.Date(2026, 9, 27, 14, 30, 5, 0, time.UTC)
 
-	active := app.checkedTooltip(checkedAt, true)
-	fallback := app.checkedTooltip(checkedAt, false)
+	active := app.checkedTooltip(checkedAt, monitor.WatchActive)
+	fallback := app.checkedTooltip(checkedAt, monitor.WatchUnavailable)
 	if active == fallback {
 		t.Fatal("checkedTooltip() does not distinguish live updates from the periodic fallback")
 	}
