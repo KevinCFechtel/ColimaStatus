@@ -38,7 +38,7 @@ type retryEventController struct {
 	watchCalls         int
 }
 
-func (controller *retryEventController) Watch(ctx context.Context, _ func()) error {
+func (controller *retryEventController) Watch(ctx context.Context, onReady, _ func()) error {
 	controller.mu.Lock()
 	controller.watchCalls++
 	call := controller.watchCalls
@@ -49,14 +49,20 @@ func (controller *retryEventController) Watch(ctx context.Context, _ func()) err
 	if call == 2 {
 		close(controller.secondWatchStarted)
 	}
+	if onReady != nil {
+		onReady()
+	}
 	<-ctx.Done()
 	return ctx.Err()
 }
 
-func (controller *eventController) Watch(ctx context.Context, notify func()) error {
+func (controller *eventController) Watch(ctx context.Context, onReady, notify func()) error {
 	controller.mu.Lock()
 	controller.watchCalls++
 	controller.mu.Unlock()
+	if onReady != nil {
+		onReady()
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -357,7 +363,7 @@ type countingWatchSource struct {
 	watchCalls atomic.Int64
 }
 
-func (source *countingWatchSource) Watch(ctx context.Context, _ func()) error {
+func (source *countingWatchSource) Watch(ctx context.Context, onReady, _ func()) error {
 	source.watchCalls.Add(1)
 	return errors.New("stream ended")
 }
