@@ -155,7 +155,6 @@ func TestShortCommandOutputCutsOnARuneBoundary(t *testing.T) {
 	}
 }
 
-
 // This fixture mirrors the public shape emitted by current `colima list
 // --json`. It pins the external contract separately from the synthetic parser
 // edge cases above so an upstream field/type change is obvious during review.
