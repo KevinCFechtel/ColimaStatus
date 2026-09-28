@@ -1,6 +1,7 @@
 package colima
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -151,5 +152,36 @@ func TestShortCommandOutputCutsOnARuneBoundary(t *testing.T) {
 	}
 	if got := shortCommandOutput("short"); got != "short" {
 		t.Fatalf("shortCommandOutput() = %q, want short input returned unchanged", got)
+	}
+}
+
+
+// This fixture mirrors the public shape emitted by current `colima list
+// --json`. It pins the external contract separately from the synthetic parser
+// edge cases above so an upstream field/type change is obvious during review.
+func TestParseProfilesAgainstColimaListContract(t *testing.T) {
+	t.Parallel()
+
+	file, err := os.Open("testdata/colima-list-contract.jsonl")
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	profiles, err := ParseProfiles(file)
+	if err != nil {
+		t.Fatalf("ParseProfiles() error = %v", err)
+	}
+	if len(profiles) != 2 {
+		t.Fatalf("ParseProfiles() returned %d profiles, want 2", len(profiles))
+	}
+	if profiles[0].Name != "default" || profiles[0].State != StateRunning ||
+		profiles[0].CPUs != 4 || profiles[0].Memory != 8589934592 ||
+		profiles[0].Disk != 107374182400 || profiles[0].Runtime != "docker" {
+		t.Fatalf("default profile = %#v", profiles[0])
+	}
+	if profiles[1].Name != "work" || profiles[1].State != StateStopped ||
+		profiles[1].Runtime != "containerd" {
+		t.Fatalf("work profile = %#v", profiles[1])
 	}
 }
