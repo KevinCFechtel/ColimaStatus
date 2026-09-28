@@ -232,7 +232,7 @@ func (app *App) render(state monitor.State) {
 		return
 	}
 
-	app.renderProfile(*state.Profile, state.Watching)
+	app.renderProfile(*state.Profile, state.Watch)
 	if state.Err != nil {
 		app.renderError(state.Err)
 	}
@@ -256,7 +256,7 @@ func (app *App) renderBusy(action monitor.Action) {
 	app.refreshItem.Disable()
 }
 
-func (app *App) renderProfile(profile colima.Profile, watching bool) {
+func (app *App) renderProfile(profile colima.Profile, watch monitor.WatchStatus) {
 	status := profilePresentation(app.texts, profile)
 	app.setIcon(profile.State == colima.StateRunning)
 	app.menu.SetTooltip("ColimaStatus – " + status)
@@ -269,7 +269,7 @@ func (app *App) renderProfile(profile colima.Profile, watching bool) {
 		app.detailsItem.Hide()
 	}
 	app.checkedItem.SetTitle(app.texts.LastChecked(profile.CheckedAt))
-	app.checkedItem.SetTooltip(app.checkedTooltip(profile.CheckedAt, watching))
+	app.checkedItem.SetTooltip(app.checkedTooltip(profile.CheckedAt, watch))
 	app.checkedItem.Show()
 
 	app.startItem.Enable()
@@ -514,9 +514,9 @@ func formatBytes(bytes int64) string {
 
 // checkedTooltip explains where the next update will come from, so that a slow
 // reaction to a Colima change is attributable instead of looking like a bug.
-func (app *App) checkedTooltip(checkedAt time.Time, watching bool) string {
+func (app *App) checkedTooltip(checkedAt time.Time, watch monitor.WatchStatus) string {
 	availability := app.texts.WatchFallback()
-	if watching {
+	if watch == monitor.WatchActive {
 		availability = app.texts.WatchActive()
 	}
 	return app.texts.FormatTimestamp(checkedAt) + " · " + availability
