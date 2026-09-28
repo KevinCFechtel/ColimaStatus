@@ -101,7 +101,7 @@ printf '%s\n' \
 	client.limaHome = t.TempDir()
 
 	var notifications atomic.Int32
-	err := client.Watch(context.Background(), func() { notifications.Add(1) })
+	err := client.Watch(context.Background(), func() {}, func() { notifications.Add(1) })
 	if err == nil {
 		t.Fatal("Watch() error = nil, want ended stream error")
 	}
@@ -118,7 +118,7 @@ func TestWatchDetectsUnsupportedCommand(t *testing.T) {
 	client.limaPath = script
 	client.limaHome = t.TempDir()
 
-	err := client.Watch(context.Background(), func() {})
+	err := client.Watch(context.Background(), func() {}, func() {})
 	if !errors.Is(err, ErrWatchUnsupported) {
 		t.Fatalf("Watch() error = %v, want ErrWatchUnsupported", err)
 	}
@@ -169,15 +169,25 @@ func TestResolveLimaHomePrefersExplicitLimaHome(t *testing.T) {
 	}
 }
 
-func TestResolveLimaHomeUsesColimaHome(t *testing.T) {
+func TestResolveLimaHomeUsesExistingColimaHome(t *testing.T) {
 	t.Setenv("LIMA_HOME", "")
-	t.Setenv("COLIMA_HOME", "relative-colima")
+	colimaHome := t.TempDir()
+	t.Setenv("COLIMA_HOME", colimaHome)
 
-	base, err := filepath.Abs("relative-colima")
-	if err != nil {
-		t.Fatalf("filepath.Abs() error = %v", err)
+	want := filepath.Join(colimaHome, "_lima")
+	if got := resolveLimaHome(); got != want {
+		t.Fatalf("resolveLimaHome() = %q, want %q", got, want)
 	}
-	want := filepath.Join(base, "_lima")
+}
+
+func TestResolveLimaHomeIgnoresMissingColimaHomeLikeColima(t *testing.T) {
+	t.Setenv("LIMA_HOME", "")
+	t.Setenv("COLIMA_HOME", filepath.Join(t.TempDir(), "missing"))
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	want := filepath.Join(home, ".colima", "_lima")
 	if got := resolveLimaHome(); got != want {
 		t.Fatalf("resolveLimaHome() = %q, want %q", got, want)
 	}
