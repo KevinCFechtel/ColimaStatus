@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GOTOOLCHAIN: local
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -20,9 +23,9 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
         with:
           go-version-file: go.mod
           cache: true
@@ -78,12 +81,12 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
         with:
           go-version-file: go.mod
           cache: true
-      - uses: golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
         with:
           # Pinned on purpose: an unpinned linter turns an upstream release into
           # a red build on unrelated pull requests. Bump this deliberately.
@@ -96,20 +99,45 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Shellcheck the build scripts
         run: shellcheck -S warning Build/*.sh
 
-  vulncheck:
-    runs-on: macos-15
-    timeout-minutes: 15
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
-          go-version-file: go.mod
-          cache: true
-      - name: Run govulncheck
+          fail-on-severity: moderate
+          show-openssf-scorecard: true
+
+  security:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/security.yml
+
+  # A single stable ruleset context. always() is essential: GitHub treats a
+  # skipped required job as passing, even when an upstream dependency failed.
+  required-checks:
+    name: Required checks
+    if: always()
+    needs: [verify, lint, shellcheck, dependency-review, security]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every applicable check to pass
+        env:
+          CHECK_RESULTS: ${{ toJSON(needs) }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-          "$(go env GOPATH)/bin/govulncheck" ./...
+          jq --exit-status --arg event "$EVENT_NAME" '
+            all(to_entries[];
+              .value.result == "success" or
+              (.key == "dependency-review" and
+               $event != "pull_request" and .value.result == "skipped"))
+          ' <<<"$CHECK_RESULTS"
