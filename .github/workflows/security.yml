@@ -1,0 +1,68 @@
+name: Security
+
+on:
+  workflow_call:
+  schedule:
+    - cron: "23 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GOTOOLCHAIN: local
+
+# Callers own their concurrency. Using github.workflow here would cancel the
+# calling CI run, since reusable workflows inherit that context.
+jobs:
+  vulncheck:
+    name: Go vulnerabilities
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Scan reachable Go vulnerabilities
+        run: ./Build/vulncheck.sh
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            runner: macos-15
+            build-mode: manual
+          - language: actions
+            runner: ubuntu-latest
+            build-mode: none
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
+        if: matrix.language == 'go'
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - name: Build for Go analysis
+        if: matrix.language == 'go'
+        # Use the real macOS/cgo build, not Linux fallback implementations.
+        # Objective-C itself is not supported by CodeQL.
+        run: ./Build/build.sh
+      - name: Analyze with CodeQL
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          category: /language:${{ matrix.language }}

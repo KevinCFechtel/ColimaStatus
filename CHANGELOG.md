@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Pull-request Dependency Review, CodeQL analysis for Go and GitHub Actions,
+  and weekly security scans, shared with the release workflow.
+- An aggregate CI check for branch protection that requires every applicable
+  quality and security check to succeed.
+
+### Changed
+
+- Pin GitHub Actions to commit SHAs and check for action updates weekly.
+- Require successful security scans before producing release artifacts.
+
 ## [1.0.0] - 2026-09-27
 
 First public release. ColimaStatus keeps the state of a local

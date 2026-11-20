@@ -141,6 +141,7 @@ The repository includes scripts for the common development tasks:
 ./Build/localization.sh # Validate localization catalogs
 ./Build/test.sh      # Run the test suite with the race detector
 ./Build/vet.sh       # Run Go's static analysis
+./Build/vulncheck.sh # Scan reachable Go vulnerabilities
 ```
 
 Regenerate the adaptive app icon with:
@@ -205,13 +206,28 @@ match `v$(cat VERSION)`; rebuilding the same version requires incrementing only
 Contributions and bug reports are welcome. Please run the formatter, tests,
 and static analysis before submitting a pull request.
 
-Every push and pull request runs the same checks on a macOS runner through
-`.github/workflows/ci.yml`: formatting, `go vet`, the localization catalogs,
-the race-enabled test suite, `golangci-lint`, `govulncheck`, and a full bundle
-build that verifies the plist, the signature, and the minimum macOS version.
-Tagging a `v*` commit additionally runs `.github/workflows/release.yml`, which
-checks the tag against `VERSION` and publishes an ad-hoc signed bundle for
-inspection. Signing and notarization stay local in `Build/release.sh`.
+Pushes to `main` and pull requests run `.github/workflows/ci.yml`: formatting,
+module-file consistency, `go vet`, localization catalogs, race-enabled tests,
+`golangci-lint`, shellcheck, and a full macOS bundle build that verifies the
+plist, signature, architectures, and minimum macOS version.
+
+The shared `.github/workflows/security.yml` runs `govulncheck` and CodeQL for
+Go and GitHub Actions. Go analysis uses the real macOS/cgo build; CodeQL does
+not analyze the Objective-C bridges. Security checks also run every Monday at
+03:23 UTC without a code change. Pull requests additionally run Dependency
+Review, which rejects newly introduced dependencies with known vulnerabilities
+of moderate severity or higher and displays OpenSSF Scorecard information.
+Actions are pinned to commit SHAs and updated weekly by Dependabot.
+
+The branch ruleset requires the `Required checks` CI job, which fails if any
+applicable quality or security job fails, is cancelled, or is unexpectedly
+skipped. CodeQL findings are displayed in GitHub Security; successful analysis
+alone does not mean there are no findings.
+
+Tagging a `v*` commit additionally runs `.github/workflows/release.yml`. It
+requires the shared security checks to succeed before building and attesting
+the ad-hoc signed universal bundle, and checks the tag against `VERSION`.
+Signing and notarization stay local in `Build/release.sh`.
 
 ## Creating a release
 
